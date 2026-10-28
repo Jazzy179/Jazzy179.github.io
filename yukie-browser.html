@@ -1,0 +1,2286 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Yukie Chrome Side Panel</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --page: #f8f8f6;
+      --surface: #ffffff;
+      --surface-soft: #fcfcfb;
+      --surface-warm: #fff8f3;
+      --panel-bg: #fafafa;
+      --panel-muted: #f5f5f5;
+      --panel-raised: #ffffff;
+      --ink: #17171a;
+      --muted: #6a675f;
+      --faint: #9b978e;
+      --line: #e6e4de;
+      --line-strong: #d6d3cb;
+      --violet: #6b48f5;
+      --violet-dark: #5b38e8;
+      --violet-soft: #f6f3ff;
+      --brand-yellow: #fec33a;
+      --brand-yellow-hover: #fed267;
+      --brand-yellow-disabled: #f1ead9;
+      --blue: #3d83d6;
+      --blue-soft: #eaf3fd;
+      --coral: #db765e;
+      --coral-soft: #fff0eb;
+      --teal: #23858c;
+      --teal-soft: #e8f6f5;
+      --green: #27805a;
+      --green-soft: #eaf6ef;
+      --shadow: 0 22px 60px rgba(31, 36, 51, .16);
+      --yukie-avatar: url("agent-avatar.png");
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--page);
+      font: 14px/1.5 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      letter-spacing: 0;
+    }
+    button, input, textarea, select { font: inherit; letter-spacing: 0; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
+    [hidden] { display: none !important; }
+
+    .prototype-shell {
+      position: relative;
+      width: min(1500px, calc(100% - 32px));
+      height: min(920px, calc(100dvh - 32px));
+      min-height: 680px;
+      margin: 16px auto;
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .browser-tabs {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: end;
+      height: 46px;
+      padding: 7px 9px 0;
+      background: #e8edf4;
+    }
+    .window-dots { display: flex; gap: 6px; padding: 0 13px 13px 3px; }
+    .window-dots span { width: 10px; height: 10px; background: #c2c8d2; border-radius: 50%; }
+    .tab-list { display: flex; min-width: 0; gap: 3px; }
+    .browser-tab {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+      max-width: 220px;
+      height: 35px;
+      padding: 0 11px;
+      color: #626772;
+      text-align: left;
+      background: #dbe1ea;
+      border: 0;
+      border-radius: 7px 7px 0 0;
+    }
+    .browser-tab.active { color: var(--ink); background: var(--surface); }
+    .browser-tab span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .browser-tab svg { flex: 0 0 auto; }
+    .browser-actions { display: flex; gap: 3px; padding: 0 0 6px 8px; }
+    .browser-icon, .icon-button {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      color: var(--muted);
+      background: transparent;
+      border: 0;
+      border-radius: 6px;
+    }
+    .browser-icon:hover, .icon-button:hover { color: var(--ink); background: var(--surface-soft); }
+    .browser-icon.active { color: var(--violet); background: var(--surface); }
+    .globalgpt-entry-logo {
+      display: block;
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+      pointer-events: none;
+    }
+    .mini-y {
+      display: grid;
+      width: 24px;
+      height: 24px;
+      place-items: center;
+      overflow: hidden;
+      color: transparent;
+      font-size: 11px;
+      font-weight: 750;
+      background: #fff var(--yukie-avatar) center / cover no-repeat;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+    }
+    .extension-picker {
+      position: absolute;
+      top: 42px;
+      right: 12px;
+      z-index: 90;
+      width: min(310px, calc(100% - 24px));
+      padding: 8px;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid #d8dbe2;
+      border-radius: 10px;
+      box-shadow: 0 18px 46px rgba(31, 36, 51, .22);
+    }
+    .extension-picker::before {
+      position: absolute;
+      top: -6px;
+      right: 45px;
+      width: 10px;
+      height: 10px;
+      content: "";
+      background: #fff;
+      border-top: 1px solid #d8dbe2;
+      border-left: 1px solid #d8dbe2;
+      transform: rotate(45deg);
+    }
+    .extension-picker-header { display: flex; min-height: 38px; align-items: center; gap: 9px; padding: 2px 4px 7px 7px; }
+    .extension-picker-header img { width: 25px; height: 25px; border-radius: 7px; }
+    .extension-picker-header strong { font-size: 12px; }
+    .extension-picker-header .icon-button { width: 30px; height: 30px; margin-left: auto; }
+    .extension-picker-label { margin: 2px 8px 6px; color: var(--muted); font-size: 9px; font-weight: 700; text-transform: uppercase; }
+    .extension-picker-item {
+      display: grid;
+      width: 100%;
+      min-height: 58px;
+      grid-template-columns: 36px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 9px;
+      color: var(--ink);
+      text-align: left;
+      background: transparent;
+      border: 0;
+      border-radius: 7px;
+    }
+    .extension-picker-item:hover, .extension-picker-item.active { background: var(--violet-soft); }
+    .extension-picker-item > img, .extension-picker-icon { width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 8px; }
+    .extension-picker-item > img { object-fit: cover; }
+    .extension-picker-icon { display: grid; place-items: center; color: var(--violet); background: #fff; }
+    .extension-picker-copy strong, .extension-picker-copy span { display: block; }
+    .extension-picker-copy strong { font-size: 12px; }
+    .extension-picker-copy span { margin-top: 1px; color: var(--muted); font-size: 10px; }
+    .extension-picker-item > svg { color: var(--faint); }
+    .extension-picker-note { margin: 6px 4px 1px; padding: 8px 8px 2px; color: var(--muted); border-top: 1px solid var(--line); font-size: 9px; }
+
+    .address-row {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      min-height: 47px;
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+    .nav-buttons { display: flex; gap: 2px; }
+    .address-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      height: 34px;
+      padding: 0 13px;
+      color: #5c616b;
+      background: #f0f2f5;
+      border-radius: 17px;
+    }
+    .address-bar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .browser-content {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(280px, 1fr) 440px;
+      height: calc(100% - 93px);
+      min-height: 0;
+    }
+    .browser-content.panel-closed { grid-template-columns: minmax(0, 1fr); }
+
+    .webpage {
+      min-width: 0;
+      min-height: 0;
+      overflow-y: auto;
+      background: #fafafa;
+    }
+    .site-nav {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 54px;
+      padding: 0 34px;
+      background: rgba(255, 255, 255, .96);
+      border-bottom: 1px solid #ececef;
+    }
+    .site-brand { font-weight: 720; }
+    .site-links { display: flex; gap: 22px; color: var(--muted); font-size: 12px; }
+    .article { max-width: 780px; margin: 0 auto; padding: 46px 42px 90px; }
+    .article-kicker { color: var(--teal); font-size: 12px; font-weight: 700; }
+    .article h1 { max-width: 700px; margin: 8px 0 14px; font-size: 34px; line-height: 1.18; }
+    .article-meta { color: var(--muted); font-size: 12px; }
+    .article-lede { margin: 28px 0; color: #3a3d44; font-size: 17px; line-height: 1.65; }
+    .article h2 { margin: 32px 0 10px; font-size: 20px; }
+    .article p { color: #3b3e45; line-height: 1.75; }
+    .web-table { width: 100%; margin-top: 20px; border-collapse: collapse; background: #fff; }
+    .web-table th, .web-table td { padding: 11px 12px; text-align: left; border: 1px solid #e7e8eb; }
+    .web-table th { color: #5a5f68; background: #f4f5f7; font-size: 12px; }
+    .video-frame {
+      display: grid;
+      aspect-ratio: 16 / 9;
+      margin: 24px 0;
+      place-items: center;
+      color: #fff;
+      background: #24262d;
+      border-radius: 7px;
+    }
+    .video-frame .play { display: grid; width: 58px; height: 58px; place-items: center; background: #fff; color: #24262d; border-radius: 50%; }
+
+    .extension {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 54px;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      background: var(--panel-bg);
+      border-left: 1px solid var(--line-strong);
+    }
+    .extension-main {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .workspace {
+      min-height: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
+      scrollbar-width: thin;
+      background: var(--panel-bg);
+    }
+    .workspace::-webkit-scrollbar { width: 8px; }
+    .workspace::-webkit-scrollbar-thumb { background: #cfd2d9; border: 2px solid var(--panel-bg); border-radius: 8px; }
+    .workspace-view { min-height: 100%; }
+
+    .home-view { min-height: 100%; }
+    .agent-empty {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      max-width: 400px;
+      min-height: 100%;
+      margin: 0 auto;
+      padding: 28px 17px 22px;
+    }
+    .home-history-button { position: absolute; top: 10px; right: 12px; }
+    .agent-task { min-height: 100%; }
+    .agent-task .message-list { padding-top: 22px; }
+    .yukie-symbol {
+      width: 42px;
+      height: 42px;
+      margin: 0 auto 10px;
+      overflow: hidden;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      box-shadow: 0 6px 18px rgba(23, 23, 26, .1);
+    }
+    .yukie-symbol img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .home-title { margin: 0 0 10px; font-size: 24px; line-height: 1.25; text-align: center; }
+    .home-description {
+      min-height: 24px;
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.5;
+      text-align: center;
+    }
+    .quick-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: start; }
+    .quick-group { min-width: 0; }
+    .quick-group + .quick-group { padding-left: 10px; border-left: 1px solid var(--line); }
+    .quick-group-title { display: flex; align-items: center; gap: 6px; min-height: 24px; margin-bottom: 7px; color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .quick-group-title svg { width: 13px; height: 13px; color: var(--violet); }
+    .quick-stack { display: grid; gap: 6px; }
+    .quick-action {
+      display: grid;
+      grid-template-columns: 30px minmax(0, 1fr);
+      align-items: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 6px 8px;
+      color: var(--ink);
+      text-align: left;
+      background: var(--panel-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      transition: border-color .15s ease, background .15s ease, transform .15s ease;
+    }
+    .quick-action:hover { background: var(--panel-muted); border-color: #c9c4df; transform: translateY(-1px); }
+    .quick-action > svg { display: none; }
+    .quick-icon { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 7px; }
+    .quick-icon.violet { color: var(--violet); background: var(--violet-soft); }
+    .quick-icon.blue { color: var(--blue); background: var(--blue-soft); }
+    .quick-icon.coral { color: var(--coral); background: var(--coral-soft); }
+    .quick-icon.teal { color: var(--teal); background: var(--teal-soft); }
+    .quick-copy strong { display: block; overflow: hidden; font-size: 11px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+    .quick-copy span { display: none; }
+    .quick-action > svg { color: #a4a7af; }
+
+    .view-header {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 62px;
+      padding: 12px 20px;
+      background: rgba(250, 250, 250, .96);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(10px);
+    }
+    .view-heading { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .view-heading > .icon-button { flex: 0 0 34px; }
+    .view-heading > .quick-icon { display: grid; flex: 0 0 32px; place-items: center; }
+    .view-heading > div { min-width: 0; }
+    .view-heading > div > strong, .view-heading > div > span { display: block; }
+    .view-heading > div > strong { font-size: 15px; line-height: 1.2; }
+    .view-heading > div > span { margin-top: 2px; color: var(--muted); font-size: 11px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .view-actions { display: flex; align-items: center; gap: 2px; }
+    .text-button { padding: 5px 7px; color: var(--violet); background: transparent; border: 0; border-radius: 5px; font-size: 12px; font-weight: 650; }
+    .text-button:hover { background: var(--violet-soft); }
+
+    .chat-empty { max-width: 390px; margin: 0 auto; padding: 54px 17px 28px; }
+    .chat-empty h2 { margin: 0 0 8px; font-size: 22px; text-align: center; }
+    .chat-empty > p { margin: 0 0 23px; color: var(--muted); text-align: center; }
+    .web-shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .web-shortcut {
+      display: flex;
+      min-height: 70px;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 12px;
+      color: var(--ink);
+      text-align: left;
+      background: var(--panel-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .web-shortcut:hover { background: var(--violet-soft); border-color: #d1c8f4; }
+    .web-shortcut svg { color: var(--violet); }
+    .web-shortcut strong { font-size: 12px; }
+    .message-list { display: grid; gap: 19px; max-width: 560px; margin: 0 auto; padding: 24px 17px 38px; }
+    .message { display: flex; gap: 9px; align-items: flex-start; }
+    .message.user { justify-content: flex-end; }
+    .message-avatar { display: grid; width: 28px; height: 28px; flex: 0 0 auto; place-items: center; overflow: hidden; color: transparent; font-size: 11px; font-weight: 700; background: #fff var(--yukie-avatar) center / cover no-repeat; border: 1px solid var(--line); border-radius: 50%; }
+    .message-stack { min-width: 0; flex: 1; }
+    .message-author { display: flex; align-items: center; gap: 6px; min-height: 24px; margin-bottom: 4px; color: var(--faint); font-size: 10px; }
+    .message-author strong { color: var(--ink); font-size: 12px; }
+    .message-bubble { max-width: 100%; color: #30323a; line-height: 1.65; overflow-wrap: anywhere; }
+    .message.user .message-bubble { max-width: 84%; padding: 9px 11px; color: #fff; background: var(--violet); border-radius: 8px 8px 2px 8px; }
+    .citation-summary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 28px;
+      margin-top: 10px;
+      padding: 0 9px;
+      color: #4f5360;
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font-size: 10px;
+    }
+    .citation-summary:hover { color: var(--violet); border-color: #cfc7f6; }
+    .source-list { display: grid; gap: 6px; margin-top: 7px; }
+    .source-item { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; align-items: center; padding: 8px; background: #fbfbfc; border: 1px solid var(--line); border-radius: 7px; }
+    .source-index { display: grid; width: 22px; height: 22px; place-items: center; color: var(--violet); background: var(--violet-soft); border-radius: 5px; font-size: 10px; font-weight: 700; }
+    .source-item strong, .source-item span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .source-item strong { font-size: 10px; }
+    .source-item span { color: var(--muted); font-size: 9px; }
+    .message-actions { display: flex; gap: 1px; margin: 7px 0 0 -5px; }
+    .message-action { display: grid; width: 28px; height: 28px; place-items: center; color: var(--faint); background: transparent; border: 0; border-radius: 5px; }
+    .message-action:hover, .message-action.active { color: var(--violet); background: var(--violet-soft); }
+    .follow-up-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+    .follow-up { min-height: 30px; padding: 5px 9px; color: #4e5260; text-align: left; background: #fff; border: 1px solid var(--line); border-radius: 7px; font-size: 10px; }
+    .follow-up:hover { color: var(--violet); border-color: #cfc7f6; }
+    .task-result-card { margin-top: 11px; padding: 11px; background: #fbfbfd; border: 1px solid var(--line); border-radius: 8px; }
+    .task-result-status { display: flex; align-items: center; gap: 5px; margin-bottom: 8px; color: var(--green); font-size: 9px; font-weight: 700; text-transform: uppercase; }
+    .task-result-card > strong { display: block; font-size: 12px; }
+    .task-result-card > p { margin: 3px 0 10px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .task-result-actions { display: flex; gap: 6px; }
+    .task-result-actions .primary-button { width: 100%; min-height: 36px; padding: 0 10px; font-size: 10px; }
+    .thinking-card { display: grid; gap: 8px; padding: 10px 11px; background: var(--surface-soft); border: 1px solid var(--line); border-radius: 8px; }
+    .thinking-title { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 650; }
+    .thinking-dots { display: inline-flex; gap: 3px; }
+    .thinking-dots span { width: 4px; height: 4px; background: var(--violet); border-radius: 50%; animation: pulse 1s infinite ease-in-out; }
+    .thinking-dots span:nth-child(2) { animation-delay: .14s; }
+    .thinking-dots span:nth-child(3) { animation-delay: .28s; }
+    .thinking-step { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 10px; }
+    .thinking-step.done { color: var(--green); }
+    .thinking-step.active { color: var(--ink); }
+    @keyframes pulse { 0%, 70%, 100% { opacity: .25; transform: translateY(0); } 35% { opacity: 1; transform: translateY(-2px); } }
+
+    .tool-body { max-width: 410px; margin: 0 auto; padding: 22px 17px 38px; }
+    .tool-intro { margin-bottom: 20px; }
+    .tool-intro h2 { margin: 0 0 5px; font-size: 20px; }
+    .tool-intro p { margin: 0; color: var(--muted); font-size: 13px; }
+    .field { display: grid; gap: 6px; margin-bottom: 14px; }
+    .field > span { color: #595d67; font-size: 12px; font-weight: 650; }
+    .field input, .field textarea, .field select {
+      width: 100%;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid var(--line-strong);
+      border-radius: 7px;
+      outline: none;
+    }
+    .field input, .field select { min-height: 42px; padding: 0 11px; }
+    .field textarea { min-height: 120px; padding: 11px; resize: vertical; }
+    .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--violet); box-shadow: 0 0 0 3px rgba(112, 84, 232, .1); }
+    .segmented { display: flex; gap: 5px; padding: 4px; background: var(--surface-soft); border-radius: 7px; }
+    .segmented button { flex: 1; min-height: 34px; color: var(--muted); background: transparent; border: 0; border-radius: 5px; }
+    .segmented button[aria-pressed="true"] { color: var(--ink); background: #fff; box-shadow: 0 1px 4px rgba(32, 35, 46, .1); }
+    .primary-button, .secondary-button {
+      display: inline-flex;
+      min-height: 40px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 14px;
+      border-radius: 7px;
+      font-weight: 650;
+    }
+    .primary-button { color: #111; background: var(--brand-yellow); border: 1px solid var(--brand-yellow); }
+    .primary-button:hover { background: var(--brand-yellow-hover); border-color: var(--brand-yellow-hover); }
+    .primary-button:disabled { color: #8a806a; background: var(--brand-yellow-disabled); border-color: var(--brand-yellow-disabled); cursor: not-allowed; }
+    .secondary-button { color: var(--ink); background: #fff; border: 1px solid var(--line-strong); }
+    .secondary-button:hover { background: var(--surface-soft); }
+    .block-button { width: 100%; min-height: 48px; border-radius: 12px; font-weight: 700; }
+    .result-panel { margin-top: 18px; padding: 14px; background: var(--surface-soft); border: 1px solid var(--line); border-radius: 8px; }
+    .result-panel strong { display: block; margin-bottom: 6px; }
+    .result-panel p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+    .generation-preview {
+      display: grid;
+      aspect-ratio: 16 / 9;
+      margin-top: 13px;
+      place-items: center;
+      color: var(--muted);
+      background: #eceff3;
+      border-radius: 7px;
+    }
+    .model-note {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 9px;
+      min-height: 48px;
+      margin-top: -7px;
+      padding: 8px 10px;
+      color: var(--muted);
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      font-size: 10px;
+    }
+    .model-mark {
+      display: grid;
+      width: 28px;
+      height: 28px;
+      place-items: center;
+      color: var(--violet);
+      background: var(--violet-soft);
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 750;
+    }
+    .model-note strong, .model-note span { display: block; min-width: 0; }
+    .model-note strong { color: var(--ink); font-size: 11px; }
+    .model-note span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .model-cost { color: var(--violet); font-size: 9px; font-weight: 700; white-space: nowrap; }
+    .reference-upload {
+      display: flex;
+      width: 100%;
+      min-height: 44px;
+      align-items: center;
+      gap: 9px;
+      padding: 0 11px;
+      color: var(--muted);
+      text-align: left;
+      background: #fff;
+      border: 1px dashed var(--line-strong);
+      border-radius: 7px;
+    }
+    .reference-upload:hover { color: var(--violet); border-color: #cfc7f6; background: var(--violet-soft); }
+    .reference-upload span { flex: 1; }
+    .reference-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 7px 8px;
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+      border-radius: 7px;
+    }
+    .reference-thumb { display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; color: var(--violet); background: var(--violet-soft); border-radius: 6px; }
+    .reference-chip > span { min-width: 0; flex: 1; }
+    .reference-chip strong, .reference-chip small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .reference-chip strong { font-size: 10px; }
+    .reference-chip small { color: var(--muted); font-size: 9px; }
+    .reference-chip .icon-button { width: 28px; height: 28px; }
+    .generate-row { display: grid; gap: 7px; margin-top: 4px; }
+    .generate-credit { display: flex; align-items: center; justify-content: center; gap: 5px; color: var(--faint); font-size: 9px; }
+    .generation-progress {
+      display: grid;
+      gap: 11px;
+      margin-top: 18px;
+      padding: 13px;
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .generation-progress-head { display: flex; align-items: center; gap: 9px; }
+    .generation-spinner { width: 20px; height: 20px; flex: 0 0 auto; border: 2px solid #d9d5f3; border-top-color: var(--violet); border-radius: 50%; animation: spin .8s linear infinite; }
+    .generation-progress-head strong, .generation-progress-head span { display: block; }
+    .generation-progress-head strong { font-size: 11px; }
+    .generation-progress-head span { color: var(--muted); font-size: 9px; }
+    .progress-track { height: 5px; overflow: hidden; background: #e1e2e7; border-radius: 4px; }
+    .progress-track span { display: block; width: 68%; height: 100%; background: var(--violet); border-radius: inherit; animation: generateProgress 1.3s ease-in-out infinite; }
+    .generation-steps { display: flex; justify-content: space-between; gap: 6px; color: var(--faint); font-size: 8px; }
+    .generation-steps span:first-child { color: var(--green); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes generateProgress { 0% { transform: translateX(-105%); } 55%, 100% { transform: translateX(148%); } }
+    .handoff-result {
+      display: grid;
+      justify-items: center;
+      gap: 9px;
+      margin-top: 18px;
+      padding: 20px 15px 15px;
+      text-align: center;
+      background: var(--panel-raised);
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+    }
+    .handoff-result-icon { display: grid; width: 42px; height: 42px; place-items: center; color: var(--green); background: var(--green-soft); border-radius: 50%; }
+    .handoff-result strong { font-size: 14px; }
+    .handoff-result > p { max-width: 290px; margin: -3px 0 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+    .handoff-result-meta { color: var(--faint); font-size: 9px; }
+    .handoff-result .primary-button { width: 100%; margin-top: 4px; }
+    .document-outline { display: grid; gap: 8px; margin: 16px 0; }
+    .outline-row { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 9px; align-items: center; padding: 10px; background: var(--surface-soft); border-radius: 7px; }
+    .outline-row span:first-child { display: grid; width: 26px; height: 26px; place-items: center; color: var(--violet); background: var(--violet-soft); border-radius: 6px; font-size: 11px; font-weight: 700; }
+    .dropzone { display: grid; min-height: 170px; place-items: center; padding: 25px; color: var(--muted); text-align: center; background: var(--surface-soft); border: 1px dashed var(--line-strong); border-radius: 8px; }
+    .dropzone svg { margin-bottom: 8px; color: var(--violet); }
+
+    .translate-body { max-width: 410px; margin: 0 auto; padding: 18px 17px 38px; }
+    .translate-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 13px; }
+    .select-pill { display: inline-flex; min-height: 38px; align-items: center; gap: 7px; padding: 0 10px; color: #3e424c; background: var(--surface-soft); border: 0; border-radius: 8px; font-size: 11px; font-weight: 650; }
+    .select-pill:hover { background: #f0f1f4; }
+    .translate-model-mark { display: grid; width: 23px; height: 23px; place-items: center; color: #fff; background: linear-gradient(140deg, #855df2, #4ca9c2); border-radius: 7px; font-size: 9px; font-weight: 750; }
+    .translator-panel { overflow: hidden; background: #fff; border: 1px solid var(--line-strong); border-radius: 8px; }
+    .translator-panel:focus-within { border-color: var(--violet); box-shadow: 0 0 0 3px rgba(112, 84, 232, .1); }
+    .translator-languages { display: grid; grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr); align-items: center; min-height: 48px; background: var(--surface-soft); border-bottom: 1px solid var(--line); }
+    .language-button { display: inline-flex; min-width: 0; align-items: center; justify-content: center; gap: 5px; padding: 0 8px; color: var(--ink); background: transparent; border: 0; font-size: 11px; font-weight: 650; }
+    .language-button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .swap-button { display: grid; width: 30px; height: 30px; place-items: center; color: var(--faint); background: transparent; border: 0; border-radius: 6px; }
+    .swap-button:hover { color: var(--violet); background: #fff; }
+    .translator-input { display: block; width: 100%; min-height: 220px; max-height: 340px; padding: 15px; color: var(--ink); resize: vertical; background: #fff; border: 0; outline: 0; }
+    .translator-controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 10px 10px; }
+    .translator-tools, .translator-submit { display: flex; align-items: center; gap: 3px; }
+    .translator-controls .primary-button { min-height: 36px; }
+    .translate-also { margin-top: 25px; color: var(--muted); font-size: 10px; }
+    .translate-types { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .translate-type { display: inline-flex; min-height: 32px; align-items: center; gap: 6px; padding: 0 10px; color: #4f5360; background: #fff; border: 1px solid var(--line); border-radius: 7px; font-size: 10px; }
+    .translate-type:hover { color: var(--violet); border-color: #cfc7f6; }
+
+    .setting-list { display: grid; gap: 3px; }
+    .setting-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px; min-height: 60px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .setting-row strong, .setting-row span { display: block; }
+    .setting-row strong { font-size: 13px; }
+    .setting-row span { margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .setting-row input { width: 38px; height: 21px; accent-color: var(--violet); }
+    .download-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .download-item { padding: 15px; background: var(--surface-soft); border: 1px solid var(--line); border-radius: 8px; }
+    .download-item svg { color: var(--violet); }
+    .download-item strong, .download-item span { display: block; }
+    .download-item strong { margin-top: 9px; }
+    .download-item span { margin: 3px 0 12px; color: var(--muted); font-size: 11px; }
+    .profile-hero { display: flex; align-items: center; gap: 13px; padding: 18px 0 24px; border-bottom: 1px solid var(--line); }
+    .avatar { display: grid; width: 48px; height: 48px; place-items: center; color: #fff; background: #7726a8; border-radius: 50%; font-size: 18px; font-weight: 700; }
+    .profile-hero strong, .profile-hero span { display: block; }
+    .profile-hero span { color: var(--muted); font-size: 11px; }
+
+    .composer {
+      position: relative;
+      z-index: 4;
+      padding: 9px 16px 14px;
+      background: var(--panel-bg);
+      border-top: 1px solid var(--line);
+    }
+    .composer-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 34px; margin-bottom: 6px; }
+    .mode-indicator, .model-select {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+      color: #444752;
+      background: transparent;
+      border: 0;
+      font-weight: 650;
+    }
+    .model-select { min-height: 32px; padding: 0 8px; border-radius: 6px; }
+    .model-select:hover { background: var(--surface-soft); }
+    .model-logo { width: 22px; height: 22px; flex: 0 0 auto; object-fit: contain; border-radius: 50%; }
+    .chat-session-actions { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+    .new-task-button { display: inline-flex; min-height: 31px; align-items: center; gap: 5px; padding: 0 7px; color: var(--violet); background: transparent; border: 0; border-radius: 6px; font-size: 11px; font-weight: 650; }
+    .new-task-button:hover { background: var(--violet-soft); }
+    .composer-context { display: flex; align-items: center; gap: 5px; min-width: 0; color: var(--muted); font-size: 11px; }
+    .composer-context span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .composer-box { padding: 9px; background: var(--panel-raised); border: 1px solid var(--line-strong); border-radius: 8px; }
+    .composer-box:focus-within { border-color: var(--violet); box-shadow: 0 0 0 3px rgba(112, 84, 232, .1); }
+    .composer textarea { display: block; width: 100%; min-height: 58px; max-height: 120px; padding: 2px; color: var(--ink); resize: vertical; background: transparent; border: 0; outline: 0; }
+    .composer-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 7px; }
+    .composer-tools { display: flex; gap: 2px; }
+    .send-button { display: grid; width: 40px; height: 40px; flex: 0 0 40px; place-items: center; color: #fff; background: #000; border: 0; border-radius: 50%; }
+    .send-button:hover { background: #292929; }
+    .send-button.generating { color: #fff; background: #292929; }
+    .chat-context-chip { display: flex; width: fit-content; max-width: 100%; align-items: center; gap: 5px; margin-bottom: 7px; padding: 4px 7px; color: #555965; background: var(--surface-soft); border-radius: 5px; font-size: 9px; }
+    .chat-context-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .model-menu, .history-panel {
+      position: absolute;
+      z-index: 25;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 14px 40px rgba(31, 36, 51, .18);
+    }
+    .model-menu { left: 14px; bottom: 150px; width: 258px; overflow: hidden; }
+    .model-menu-header { display: flex; min-height: 38px; align-items: center; justify-content: space-between; padding: 0 11px; border-bottom: 1px solid var(--line); }
+    .model-menu-header strong { font-size: 11px; }
+    .model-menu-header span { color: var(--muted); font-size: 9px; }
+    .model-list { max-height: 248px; padding: 5px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+    .model-list::-webkit-scrollbar, .history-list::-webkit-scrollbar { width: 7px; }
+    .model-list::-webkit-scrollbar-thumb, .history-list::-webkit-scrollbar-thumb { background: #d5d3ce; border: 2px solid #fff; border-radius: 8px; }
+    .model-option { display: grid; width: 100%; min-height: 52px; grid-template-columns: 28px minmax(0, 1fr) 17px; align-items: center; gap: 9px; padding: 8px 9px; text-align: left; background: transparent; border: 0; border-radius: 6px; }
+    .model-option:hover, .model-option.active { background: var(--surface-soft); }
+    .model-option .model-logo { width: 28px; height: 28px; }
+    .model-option-copy, .model-option-copy strong, .model-option-copy span { display: block; }
+    .model-option strong { font-size: 11px; }
+    .model-option-copy span { margin-top: 2px; color: var(--muted); font-size: 9px; }
+    .model-option svg { color: var(--violet); }
+    .history-panel {
+      inset: 0 54px auto 0;
+      display: flex;
+      height: min(500px, calc(100% - 14px));
+      flex-direction: column;
+      overflow: hidden;
+      border-top: 0;
+      border-left: 0;
+      border-radius: 0 0 8px 8px;
+      box-shadow: 0 16px 42px rgba(31, 36, 51, .16);
+    }
+    .history-header { display: flex; align-items: center; justify-content: space-between; padding: 9px 9px 7px 12px; border-bottom: 1px solid var(--line); }
+    .history-header-main { display: flex; align-items: center; gap: 9px; }
+    .history-title-icon { display: grid; width: 30px; height: 30px; place-items: center; color: var(--violet); background: var(--violet-soft); border-radius: 7px; }
+    .history-header-copy strong, .history-header-copy span { display: block; }
+    .history-header-copy strong { font-size: 13px; }
+    .history-header-copy span { margin-top: 1px; color: var(--muted); font-size: 9px; }
+    .history-list { min-height: 0; padding: 7px 7px 8px; overflow-y: auto; overscroll-behavior: contain; }
+    .history-group + .history-group { margin-top: 4px; }
+    .history-group-label { padding: 7px 7px 3px; color: var(--faint); font-size: 8px; font-weight: 750; text-transform: uppercase; }
+    .history-item { display: grid; width: 100%; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 8px 7px; color: var(--ink); text-align: left; background: transparent; border: 0; border-radius: 6px; }
+    .history-item:hover { background: var(--surface-soft); }
+    .history-item-icon { display: grid; width: 30px; height: 30px; place-items: center; color: var(--violet); background: var(--violet-soft); border-radius: 7px; }
+    .history-item[data-history-type="chat"] .history-item-icon { color: var(--blue); background: var(--blue-soft); }
+    .history-item-copy { min-width: 0; }
+    .history-item-copy strong, .history-item-copy span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .history-item strong { font-size: 11px; }
+    .history-item-copy span { margin-top: 2px; color: var(--muted); font-size: 9px; }
+    .history-kind { padding: 3px 5px; color: var(--violet); background: var(--violet-soft); border-radius: 4px; font-size: 8px; font-weight: 700; }
+    .history-item[data-history-type="chat"] .history-kind { color: var(--blue); background: var(--blue-soft); }
+
+    .rail {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      min-height: 0;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 7px 10px;
+      background: var(--panel-muted);
+      border-left: 1px solid var(--line);
+    }
+    .rail-group { display: grid; width: 100%; gap: 5px; justify-items: center; }
+    .rail-bottom { margin-top: auto; }
+    .rail-separator { width: 30px; height: 1px; margin: 5px 0; background: var(--line); }
+    .rail-button {
+      position: relative;
+      display: grid;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      color: #777b8d;
+      background: transparent;
+      border: 0;
+      border-radius: 8px;
+    }
+    .rail-button:hover { color: var(--ink); background: #fff; }
+    .rail-button.active { color: var(--violet); background: #fff; box-shadow: 0 2px 9px rgba(48, 45, 67, .09); }
+    .rail-button::after {
+      position: absolute;
+      right: 49px;
+      z-index: 20;
+      width: max-content;
+      max-width: 150px;
+      padding: 5px 7px;
+      color: #fff;
+      content: attr(data-tip);
+      font-size: 11px;
+      line-height: 1.2;
+      pointer-events: none;
+      visibility: hidden;
+      opacity: 0;
+      background: #25262c;
+      border-radius: 5px;
+      transform: translateX(4px);
+      transition: opacity .12s ease, transform .12s ease;
+    }
+    .rail-button:hover::after, .rail-button:focus-visible::after { visibility: visible; opacity: 1; transform: translateX(0); }
+    .rail-y { display: grid; width: 30px; height: 30px; place-items: center; overflow: hidden; color: transparent; font-weight: 780; background: #fff var(--yukie-avatar) center / cover no-repeat; border: 1px solid var(--line); border-radius: 50%; }
+    .profile-dot { display: grid; width: 30px; height: 30px; place-items: center; color: #fff; background: #7726a8; border-radius: 50%; font-size: 12px; font-weight: 700; }
+
+    .side-panel-launcher {
+      position: absolute;
+      top: 50%;
+      right: 18px;
+      z-index: 18;
+      display: grid;
+      width: 56px;
+      height: 56px;
+      padding: 6px;
+      place-items: center;
+      color: var(--ink);
+      background: rgba(255, 255, 255, .98);
+      border: 1px solid #e2e2e5;
+      border-radius: 50%;
+      box-shadow: 0 12px 34px rgba(27, 29, 38, .18);
+      cursor: grab;
+      touch-action: none;
+      transform: translateY(-50%);
+      transition: box-shadow .16s ease, transform .16s ease;
+      user-select: none;
+    }
+    .side-panel-launcher:hover {
+      box-shadow: 0 15px 38px rgba(27, 29, 38, .24);
+      transform: translateY(-50%) scale(1.04);
+    }
+    .side-panel-launcher.dragging {
+      cursor: grabbing;
+      box-shadow: 0 16px 40px rgba(27, 29, 38, .26);
+      transform: translateY(-50%) scale(1.04);
+      transition: box-shadow .12s ease;
+    }
+    .side-panel-launcher img {
+      display: block;
+      width: 42px;
+      height: 42px;
+      object-fit: cover;
+      pointer-events: none;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px var(--violet);
+      user-select: none;
+    }
+    .side-panel-launcher::after {
+      position: absolute;
+      right: calc(100% + 10px);
+      width: max-content;
+      padding: 5px 8px;
+      color: #fff;
+      content: "Drag to move / Click to open";
+      pointer-events: none;
+      visibility: hidden;
+      opacity: 0;
+      background: #25262c;
+      border-radius: 5px;
+      font-size: 11px;
+      transform: translateX(4px);
+      transition: opacity .12s ease, transform .12s ease;
+    }
+    .side-panel-launcher:hover::after, .side-panel-launcher:focus-visible::after { visibility: visible; opacity: 1; transform: translateX(0); }
+
+    .toast {
+      position: absolute;
+      right: 80px;
+      bottom: 18px;
+      z-index: 30;
+      max-width: 320px;
+      padding: 10px 13px;
+      color: #fff;
+      background: #292a31;
+      border-radius: 7px;
+      box-shadow: 0 12px 30px rgba(20, 22, 29, .2);
+    }
+    .page-context-menu {
+      position: fixed;
+      z-index: 80;
+      width: 228px;
+      padding: 6px;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: 0 14px 36px rgba(23, 23, 26, .16);
+    }
+    .context-menu-brand { display: flex; align-items: center; gap: 7px; min-height: 32px; padding: 0 8px 5px; color: var(--muted); font-size: 10px; font-weight: 700; }
+    .context-menu-brand img { width: 20px; height: 20px; border-radius: 5px; }
+    .context-menu-selection { max-width: 100%; margin: 0 5px 5px; padding: 6px 8px; overflow: hidden; color: var(--muted); background: var(--page); border-radius: 6px; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+    .context-menu-item { display: flex; width: 100%; min-height: 36px; align-items: center; gap: 9px; padding: 0 9px; color: var(--ink); text-align: left; background: transparent; border: 0; border-radius: 7px; font-size: 11px; }
+    .context-menu-item:hover { color: var(--violet); background: var(--violet-soft); }
+    .context-menu-item svg { width: 15px; height: 15px; color: var(--muted); }
+    .context-menu-item:hover svg { color: var(--violet); }
+    .context-menu-separator { height: 1px; margin: 5px; background: var(--line); }
+    .auth-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 40;
+      display: grid;
+      place-items: center;
+      padding: 12px;
+      background: rgba(23, 23, 26, .48);
+      backdrop-filter: blur(2px);
+    }
+    .auth-dialog {
+      position: relative;
+      width: min(388px, 100%);
+      max-height: calc(100% - 24px);
+      overflow-y: auto;
+      padding: 24px 26px 22px;
+      color: #17171a;
+      text-align: center;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 54px rgba(17, 20, 28, .26);
+    }
+    .auth-close { position: absolute; top: 10px; right: 10px; }
+    .auth-brand { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 17px; font-weight: 700; }
+    .auth-brand img { width: 27px; height: 27px; border-radius: 7px; }
+    .auth-dialog h2 { margin: 0; font-size: 22px; line-height: 1.25; }
+    .auth-subtitle { margin: 8px 0 20px; color: rgba(0, 0, 0, .5); font-size: 12px; }
+    .auth-provider { display: flex; width: 100%; min-height: 40px; align-items: center; justify-content: center; gap: 9px; margin-top: 10px; color: rgba(0, 0, 0, .8); background: #fff; border: 1px solid #dadce0; border-radius: 999px; font-size: 12px; }
+    .auth-provider:hover { background: #f8f8f6; }
+    .auth-provider img { width: 18px; height: 18px; object-fit: contain; }
+    .auth-provider svg { width: 17px; height: 17px; }
+    .auth-divider { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; margin: 18px 0; color: rgba(0, 0, 0, .3); font-size: 9px; }
+    .auth-divider::before, .auth-divider::after { content: ""; height: 1px; background: #dadce0; }
+    .auth-email { width: 100%; min-height: 40px; padding: 0 14px; color: #17171a; background: #fff; border: 1px solid #dadce0; border-radius: 999px; outline: 0; }
+    .auth-email:focus { border-color: #9b978e; box-shadow: 0 0 0 3px rgba(23, 23, 26, .06); }
+    .auth-continue { display: flex; width: 100%; min-height: 42px; align-items: center; justify-content: center; margin-top: 14px; color: #fff; background: #17171a; border: 0; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .auth-continue:hover { background: #2e2e36; }
+    .auth-consent { display: flex; align-items: flex-start; gap: 8px; margin-top: 14px; color: rgba(0, 0, 0, .65); text-align: left; font-size: 9px; }
+    .auth-consent input { margin-top: 2px; accent-color: #17171a; }
+    .auth-terms { margin: 11px 0 0; color: rgba(0, 0, 0, .35); font-size: 9px; }
+    .auth-terms a { color: #368aea; }
+    .auth-back { display: inline-flex; min-height: 30px; align-items: center; gap: 5px; margin: -8px auto 18px 0; padding: 0; color: #17171a; background: transparent; border: 0; font-size: 11px; }
+    .auth-code-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 18px 0; }
+    .auth-code { width: 100%; aspect-ratio: 1; padding: 0; color: #17171a; text-align: center; background: #fff; border: 1px solid #dadce0; border-radius: 8px; font-size: 18px; }
+    .auth-permissions { display: grid; gap: 4px; margin: 18px 0; text-align: left; }
+    .auth-permission { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 9px; align-items: center; min-height: 48px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+    .auth-permission:last-child { border-bottom: 0; }
+    .auth-permission > span:first-child { display: grid; width: 30px; height: 30px; place-items: center; color: var(--violet); background: var(--violet-soft); border-radius: 7px; }
+    .auth-permission strong, .auth-permission small { display: block; }
+    .auth-permission strong { font-size: 11px; }
+    .auth-permission small { color: var(--muted); font-size: 9px; }
+    .auth-secondary { width: 100%; min-height: 38px; margin-top: 8px; color: var(--muted); background: transparent; border: 0; font-size: 11px; }
+    .auth-success-mark { display: grid; width: 54px; height: 54px; margin: 4px auto 16px; place-items: center; color: #fff; background: var(--green); border-radius: 50%; }
+    .auth-error { margin: 7px 0 0; color: #e85f5c; font-size: 9px; }
+    .auth-success-copy { margin: 0 auto 18px; color: var(--muted); font-size: 11px; }
+
+    @media (max-width: 760px) {
+      .browser-content { grid-template-columns: 1fr; }
+      .webpage { display: none; }
+      .browser-content.panel-closed .webpage { display: block; }
+      .extension { border-left: 0; }
+    }
+    @media (max-width: 680px) {
+      .prototype-shell { width: 100%; height: 100dvh; min-height: 620px; margin: 0; border: 0; border-radius: 0; }
+      .browser-tabs, .address-row { display: none; }
+      .extension-picker { display: none; }
+      .browser-content { height: 100%; }
+      .extension { grid-template-columns: minmax(0, 1fr) 54px; }
+      .rail { padding-inline: 5px; }
+      .rail-button { width: 42px; }
+      .agent-empty { padding: 26px 16px 20px; }
+      .home-title { font-size: 24px; }
+      .quick-columns { gap: 8px; }
+      .quick-group + .quick-group { padding-left: 8px; }
+      .quick-action { grid-template-columns: 29px minmax(0, 1fr); padding: 8px; }
+      .quick-icon { width: 29px; height: 29px; }
+      .view-header { gap: 8px; min-height: 58px; padding: 10px 12px; }
+      .view-heading { gap: 8px; }
+      .view-heading > .icon-button { width: 32px; height: 32px; flex-basis: 32px; }
+      .view-heading > .quick-icon { flex-basis: 29px; }
+      .quick-copy strong { line-height: 1.2; white-space: normal; }
+      .quick-action > svg, .quick-copy span { display: none; }
+      .web-shortcuts, .download-grid { grid-template-columns: 1fr; }
+      .composer { padding-inline: 10px; }
+      .rail-button::after { display: none; }
+      .side-panel-launcher { right: 12px; width: 52px; height: 52px; }
+      .side-panel-launcher img { width: 38px; height: 38px; }
+    }
+    @media (max-height: 720px) {
+      .agent-empty { justify-content: flex-start; }
+      .yukie-symbol { margin-bottom: 12px; }
+      .home-title { margin-bottom: 17px; }
+      .quick-action { min-height: 44px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="prototype-shell" aria-label="Yukie Chrome extension interactive prototype">
+    <div class="browser-tabs">
+      <div class="window-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="tab-list" role="tablist" aria-label="Browser tabs">
+        <button class="browser-tab active" type="button" role="tab" aria-selected="true" data-page="article"><i data-lucide="globe-2" aria-hidden="true"></i><span>AI Browser Agents: 2026 Landscape</span></button>
+        <button class="browser-tab" type="button" role="tab" aria-selected="false" data-page="youtube"><i data-lucide="youtube" aria-hidden="true"></i><span>Browser Agents Explained - YouTube</span></button>
+        <button class="browser-tab" type="button" role="tab" aria-selected="false" data-page="pricing"><i data-lucide="tag" aria-hidden="true"></i><span>Acme Analytics Pricing</span></button>
+      </div>
+      <div class="browser-actions"><button id="extension-toggle" class="browser-icon active" type="button" data-browser-action="toggle-extension" aria-label="Close Yukie side panel" aria-pressed="true" aria-haspopup="dialog" aria-expanded="false"><img class="globalgpt-entry-logo" src="https://static.futureshareai.com/glb_v3/logoBg.png" alt=""></button><button class="browser-icon" type="button" aria-label="Browser menu" data-browser-action="menu"><i data-lucide="more-vertical" aria-hidden="true"></i></button></div>
+    </div>
+
+    <section id="extension-picker" class="extension-picker" role="dialog" aria-label="Choose a GlobalGPT tool" hidden>
+      <div class="extension-picker-header"><img src="https://static.futureshareai.com/glb_v3/logoBg.png" alt=""><strong>GlobalGPT</strong><button class="icon-button" type="button" data-extension-action="close-picker" aria-label="Close extension menu"><i data-lucide="x" aria-hidden="true"></i></button></div>
+      <div class="extension-picker-label">Open side panel</div>
+      <button class="extension-picker-item active" type="button" data-extension-mode="home" aria-pressed="true"><img src="agent-avatar.png" alt=""><span class="extension-picker-copy"><strong>Yukie</strong><span>Plan tasks and create deliverables</span></span><i data-lucide="arrow-right" aria-hidden="true"></i></button>
+      <button class="extension-picker-item" type="button" data-extension-mode="chat" aria-pressed="false"><span class="extension-picker-icon"><i data-lucide="message-square" aria-hidden="true"></i></span><span class="extension-picker-copy"><strong>Chat</strong><span>Ask about the current page</span></span><i data-lucide="arrow-right" aria-hidden="true"></i></button>
+      <p class="extension-picker-note">Page content is used only when you start a page task.</p>
+    </section>
+
+    <div class="address-row">
+      <div class="nav-buttons"><button class="browser-icon" type="button" aria-label="Back" data-browser-action="back"><i data-lucide="arrow-left" aria-hidden="true"></i></button><button class="browser-icon" type="button" aria-label="Forward" data-browser-action="forward"><i data-lucide="arrow-right" aria-hidden="true"></i></button><button class="browser-icon" type="button" aria-label="Reload" data-browser-action="reload"><i data-lucide="rotate-cw" aria-hidden="true"></i></button></div>
+      <div class="address-bar"><i data-lucide="lock" aria-hidden="true"></i><span id="address-copy">studiojournal.example/research/browser-agents-2026</span></div>
+      <button class="browser-icon" type="button" aria-label="Bookmark this page" data-browser-action="bookmark"><i data-lucide="star" aria-hidden="true"></i></button>
+    </div>
+
+    <div id="browser-content" class="browser-content">
+      <section class="webpage" aria-label="Current webpage">
+        <nav class="site-nav"><strong id="site-brand" class="site-brand">Studio Journal</strong><div id="site-links" class="site-links"><span>Research</span><span>Products</span><span>About</span></div></nav>
+        <article id="article-content" class="article"></article>
+      </section>
+
+      <aside id="extension-panel" class="extension" aria-label="Yukie side panel">
+        <div class="extension-main">
+          <div id="workspace" class="workspace" aria-live="polite">
+            <section class="workspace-view home-view" data-view="home">
+              <div id="agent-empty" class="agent-empty">
+                <button class="icon-button home-history-button" type="button" data-action="toggle-history" aria-label="History"><i data-lucide="history" aria-hidden="true"></i></button>
+                <div class="yukie-symbol"><img src="agent-avatar.png" alt="Yukie"></div>
+                <h1 class="home-title">What can I do for you?</h1>
+                <p class="home-description">Yukie is more than a chatbot—your AI super agent that gets everything done.</p>
+                <div class="quick-columns">
+                  <section class="quick-group" aria-labelledby="create-group-title"><div id="create-group-title" class="quick-group-title"><i data-lucide="sparkles" aria-hidden="true"></i>Create</div><div class="quick-stack">
+                    <button class="quick-action" type="button" data-quick="ppt"><span class="quick-icon violet"><i data-lucide="presentation" aria-hidden="true"></i></span><span class="quick-copy"><strong>Slides</strong></span></button>
+                    <button class="quick-action" type="button" data-quick="document"><span class="quick-icon blue"><i data-lucide="file-text" aria-hidden="true"></i></span><span class="quick-copy"><strong>Document</strong></span></button>
+                    <button class="quick-action" type="button" data-quick="image"><span class="quick-icon coral"><i data-lucide="image" aria-hidden="true"></i></span><span class="quick-copy"><strong>Image</strong></span></button>
+                    <button class="quick-action" type="button" data-quick="video"><span class="quick-icon teal"><i data-lucide="video" aria-hidden="true"></i></span><span class="quick-copy"><strong>Video</strong></span></button>
+                  </div></section>
+                  <section class="quick-group" aria-labelledby="page-group-title"><div id="page-group-title" class="quick-group-title"><i data-lucide="globe-2" aria-hidden="true"></i>Page tools</div><div class="quick-stack">
+                    <button class="quick-action" type="button" data-quick="read-discuss"><span class="quick-icon teal"><i data-lucide="scan-text" aria-hidden="true"></i></span><span class="quick-copy"><strong>Ask page</strong></span></button>
+                    <button class="quick-action" type="button" data-quick="summarize-page"><span class="quick-icon violet"><i data-lucide="notebook-tabs" aria-hidden="true"></i></span><span class="quick-copy"><strong>Summary</strong></span></button>
+                    <button class="quick-action" type="button" data-quick="summarize-youtube"><span class="quick-icon coral"><i data-lucide="youtube" aria-hidden="true"></i></span><span class="quick-copy"><strong>YouTube Summary</strong></span></button>
+                    <button class="quick-action" type="button" data-quick="page-create"><span class="quick-icon blue"><i data-lucide="wand-sparkles" aria-hidden="true"></i></span><span class="quick-copy"><strong>Create from page</strong></span></button>
+                  </div></section>
+                </div>
+              </div>
+              <div id="agent-task" class="agent-task" hidden>
+                <header class="view-header"><div class="view-heading"><button class="icon-button" type="button" data-action="new-yukie-task" aria-label="Back to Yukie home"><i data-lucide="arrow-left" aria-hidden="true"></i></button><span class="quick-icon violet"><span class="mini-y">Y</span></span><div><strong>Yukie Agent</strong><span>Task workspace</span></div></div><div class="view-actions"><button class="icon-button" type="button" data-action="toggle-history" aria-label="History"><i data-lucide="history" aria-hidden="true"></i></button><button class="text-button" type="button" data-action="new-yukie-task"><i data-lucide="plus" aria-hidden="true"></i> New task</button></div></header>
+                <div id="agent-message-list" class="message-list"></div>
+              </div>
+            </section>
+
+            <section class="workspace-view" data-view="chat" hidden>
+              <header class="view-header"><div class="view-heading"><span class="quick-icon violet"><i data-lucide="message-square" aria-hidden="true"></i></span><div><strong>Chat</strong><span data-current-page>AI Browser Agents: 2026 Landscape</span></div></div><button class="icon-button" type="button" data-action="toggle-history" aria-label="Conversation history"><i data-lucide="history" aria-hidden="true"></i></button></header>
+              <div id="chat-empty" class="chat-empty">
+                <h2>Ask this page</h2>
+                <p>Page answers with citations.</p>
+                <div class="web-shortcuts">
+                  <button class="web-shortcut" type="button" data-quick="read-discuss"><i data-lucide="scan-text" aria-hidden="true"></i><strong>Ask this page</strong></button>
+                  <button class="web-shortcut" type="button" data-quick="summarize-page"><i data-lucide="notebook-tabs" aria-hidden="true"></i><strong>Summarize page</strong></button>
+                  <button class="web-shortcut" type="button" data-quick="summarize-youtube"><i data-lucide="youtube" aria-hidden="true"></i><strong>Summarize YouTube</strong></button>
+                  <button class="web-shortcut" type="button" data-quick="page-create"><i data-lucide="wand-sparkles" aria-hidden="true"></i><strong>Create from page</strong></button>
+                </div>
+              </div>
+              <div id="message-list" class="message-list" hidden></div>
+            </section>
+
+            <section class="workspace-view" data-view="image" hidden>
+              <header class="view-header"><div class="view-heading"><button class="icon-button" type="button" data-action="back-mode" aria-label="Back to previous mode"><i data-lucide="arrow-left" aria-hidden="true"></i></button><span class="quick-icon coral"><i data-lucide="image" aria-hidden="true"></i></span><div><strong>Image</strong><span>Create and edit</span></div></div><button class="text-button" type="button" data-action="reset-tool">Clear</button></header>
+              <div class="tool-body">
+                <div class="tool-intro"><h2>Generate an image</h2><p>Choose a model and describe the image.</p></div>
+                <label class="field"><span>Model</span><select id="image-model" data-media-model="image"><option>GPT Image 2.5</option><option>Nano Banana 2.1</option><option>Midjourney</option><option>Seedream 5.0 Pro</option><option>Agnes Image 2.1 Flash</option></select></label>
+                <div id="image-model-note" class="model-note"><span class="model-mark">GI</span><span><strong>GPT Image 2.5</strong><span>High-fidelity generation and editing</span></span><span id="image-model-cost" class="model-cost">320 credits</span></div>
+                <div class="field" style="margin-top:14px"><span>Reference image <small style="font-weight:400;color:var(--faint)">Optional</small></span><button class="reference-upload" type="button" data-action="add-reference" data-reference="image"><i data-lucide="image-plus" aria-hidden="true"></i><span>Add an image or capture this page</span><i data-lucide="chevron-right" aria-hidden="true"></i></button><div id="image-reference-chip" class="reference-chip" hidden><span class="reference-thumb"><i data-lucide="image" aria-hidden="true"></i></span><span><strong>Current page capture</strong><small>Used as a visual reference</small></span><button class="icon-button" type="button" data-action="remove-reference" data-reference="image" aria-label="Remove image reference"><i data-lucide="x" aria-hidden="true"></i></button></div></div>
+                <label class="field"><span>Prompt</span><textarea id="image-prompt" placeholder="For example: Create a clean editorial cover for this browser agent article"></textarea></label>
+                <div class="field"><span>Aspect ratio</span><div class="segmented" data-segment="image-ratio"><button type="button" aria-pressed="true">1:1</button><button type="button" aria-pressed="false">16:9</button><button type="button" aria-pressed="false">4:5</button></div></div>
+                <div class="generate-row"><button id="image-generate-button" class="primary-button block-button" type="button" data-generate="image"><i data-lucide="sparkles" aria-hidden="true"></i>Generate image</button><span class="generate-credit"><i data-lucide="coins" aria-hidden="true"></i><span id="image-generate-cost">Estimated 320 credits</span></span></div>
+                <div id="image-progress" class="generation-progress" hidden><div class="generation-progress-head"><span class="generation-spinner" aria-hidden="true"></span><span><strong>Creating your image</strong><span>Generating and checking the first result</span></span></div><div class="progress-track"><span></span></div><div class="generation-steps"><span>Prompt ready</span><span>Generating</span><span>Quality check</span></div></div>
+                <div id="image-result" class="handoff-result" hidden><span class="handoff-result-icon"><i data-lucide="circle-check" aria-hidden="true"></i></span><strong>Image ready on GlobalGPT</strong><p>View the result, download it, or continue editing on the main site.</p><span id="image-result-meta" class="handoff-result-meta">GPT Image 2.5 · 1:1 · Saved to GlobalGPT</span><button class="primary-button block-button" type="button" data-action="open-product" data-product="image"><i data-lucide="external-link" aria-hidden="true"></i>View on GlobalGPT</button></div>
+              </div>
+            </section>
+
+            <section class="workspace-view" data-view="video" hidden>
+              <header class="view-header"><div class="view-heading"><button class="icon-button" type="button" data-action="back-mode" aria-label="Back to previous mode"><i data-lucide="arrow-left" aria-hidden="true"></i></button><span class="quick-icon teal"><i data-lucide="video" aria-hidden="true"></i></span><div><strong>Video</strong><span>Create and edit</span></div></div><button class="text-button" type="button" data-action="reset-tool">Clear</button></header>
+              <div class="tool-body">
+                <div class="tool-intro"><h2>Generate a video</h2><p>Choose a model and describe the clip.</p></div>
+                <label class="field"><span>Model</span><select id="video-model" data-media-model="video"><option>Seedance 2.5</option><option>Wan 3.0</option><option>Agnes Video 2.5</option><option>MiniMax-H3</option><option>Sora 2</option></select></label>
+                <div id="video-model-note" class="model-note"><span class="model-mark">S2</span><span><strong>Seedance 2.5</strong><span>Cinematic motion and strong prompt following</span></span><span id="video-model-cost" class="model-cost">7,300 credits</span></div>
+                <div class="field" style="margin-top:14px"><span>Reference media <small style="font-weight:400;color:var(--faint)">Optional</small></span><button class="reference-upload" type="button" data-action="add-reference" data-reference="video"><i data-lucide="upload" aria-hidden="true"></i><span>Add an image, video, or page capture</span><i data-lucide="chevron-right" aria-hidden="true"></i></button><div id="video-reference-chip" class="reference-chip" hidden><span class="reference-thumb"><i data-lucide="image" aria-hidden="true"></i></span><span><strong>Image reference</strong><small>First-frame guidance</small></span><button class="icon-button" type="button" data-action="remove-reference" data-reference="video" aria-label="Remove video reference"><i data-lucide="x" aria-hidden="true"></i></button></div></div>
+                <label class="field"><span>Video prompt</span><textarea id="video-prompt" placeholder="Describe the subject, action, camera movement, lighting, and sound"></textarea></label>
+                <div class="field"><span>Aspect ratio</span><div class="segmented" data-segment="video-ratio"><button type="button" aria-pressed="true">9:16</button><button type="button" aria-pressed="false">16:9</button><button type="button" aria-pressed="false">1:1</button></div></div>
+                <label class="field"><span>Duration</span><select id="video-duration"><option>5 sec</option><option>10 sec</option><option selected>15 sec</option></select></label>
+                <div class="generate-row"><button id="video-generate-button" class="primary-button block-button" type="button" data-generate="video"><i data-lucide="clapperboard" aria-hidden="true"></i>Generate video</button><span class="generate-credit"><i data-lucide="coins" aria-hidden="true"></i><span id="video-generate-cost">Estimated 7,300 credits</span></span></div>
+                <div id="video-progress" class="generation-progress" hidden><div class="generation-progress-head"><span class="generation-spinner" aria-hidden="true"></span><span><strong>Generating your video</strong><span>Building motion, sound, and a final quality check</span></span></div><div class="progress-track"><span></span></div><div class="generation-steps"><span>Prompt ready</span><span>Rendering</span><span>Finalizing</span></div></div>
+                <div id="video-result" class="handoff-result" hidden><span class="handoff-result-icon"><i data-lucide="circle-check" aria-hidden="true"></i></span><strong>Video ready on GlobalGPT</strong><p>View the result, download it, or continue editing on the main site.</p><span id="video-result-meta" class="handoff-result-meta">Seedance 2.5 · 9:16 · 15 sec · Saved to GlobalGPT</span><button class="primary-button block-button" type="button" data-action="open-product" data-product="video"><i data-lucide="external-link" aria-hidden="true"></i>View on GlobalGPT</button></div>
+              </div>
+            </section>
+
+            <section class="workspace-view" data-view="audio" hidden>
+              <header class="view-header"><div class="view-heading"><button class="icon-button" type="button" data-action="back-mode" aria-label="Back to previous mode"><i data-lucide="arrow-left" aria-hidden="true"></i></button><span class="quick-icon blue"><i data-lucide="audio-lines" aria-hidden="true"></i></span><div><strong>Audio</strong><span>Text to speech and transcription</span></div></div></header>
+              <div class="tool-body"><div class="segmented" data-segment="audio-mode"><button type="button" aria-pressed="true" data-audio-mode="tts">Text to speech</button><button type="button" aria-pressed="false" data-audio-mode="transcribe">Transcribe</button></div><div id="audio-tts" style="margin-top:18px"><label class="field"><span>Text</span><textarea id="audio-text" placeholder="Enter the text you want to hear"></textarea></label><label class="field"><span>Voice</span><select><option>Yukie Clear</option><option>Deep and steady</option><option>Natural narrator</option></select></label><button class="primary-button block-button" type="button" data-generate="audio"><i data-lucide="volume-2" aria-hidden="true"></i>Generate audio</button></div><div id="audio-transcribe" style="margin-top:18px" hidden><div class="dropzone"><div><i data-lucide="upload-cloud" aria-hidden="true"></i><strong>Upload audio or video</strong><p>MP3, WAV, M4A, MP4</p><button class="secondary-button" type="button" data-action="fake-upload">Choose file</button></div></div></div><div id="audio-result" class="handoff-result" hidden><span class="handoff-result-icon"><i data-lucide="circle-check" aria-hidden="true"></i></span><strong>Audio ready on GlobalGPT</strong><p>Listen, download, or continue editing on the main site.</p><button class="primary-button block-button" type="button" data-action="open-product" data-product="audio"><i data-lucide="external-link" aria-hidden="true"></i>View on GlobalGPT</button></div></div>
+            </section>
+
+            <section class="workspace-view" data-view="translate" hidden>
+              <header class="view-header"><div class="view-heading"><button class="icon-button" type="button" data-action="back-mode" aria-label="Back to previous mode"><i data-lucide="arrow-left" aria-hidden="true"></i></button><span class="quick-icon teal"><i data-lucide="languages" aria-hidden="true"></i></span><div><strong>Translate</strong><span>Text, pages, files, and images</span></div></div><button class="text-button" type="button" data-action="translate-page">Use this page</button></header>
+              <div class="translate-body">
+                <div class="translate-toolbar"><button class="select-pill" type="button" data-action="translate-model"><span class="translate-model-mark">Y</span>Yukie Translate<i data-lucide="chevron-down" aria-hidden="true"></i></button><button class="select-pill" type="button" data-action="translate-preferences">Default preferences<i data-lucide="chevron-down" aria-hidden="true"></i></button></div>
+                <div class="translator-panel">
+                  <div class="translator-languages"><button id="source-language" class="language-button" type="button" data-action="source-language"><span>Auto detect</span><i data-lucide="chevron-down" aria-hidden="true"></i></button><button class="swap-button" type="button" data-action="swap-languages" aria-label="Swap languages"><i data-lucide="arrow-left-right" aria-hidden="true"></i></button><button id="target-language" class="language-button" type="button" data-action="target-language"><span>Simplified Chinese</span><i data-lucide="chevron-down" aria-hidden="true"></i></button></div>
+                  <textarea id="translate-source" class="translator-input" placeholder="Type or paste text here..."></textarea>
+                  <div class="translator-controls"><div class="translator-tools"><button class="icon-button" type="button" data-action="translate-voice" aria-label="Voice input"><i data-lucide="mic" aria-hidden="true"></i></button><button class="icon-button" type="button" data-action="clear-translation" aria-label="Clear text"><i data-lucide="trash-2" aria-hidden="true"></i></button><button class="icon-button" type="button" data-action="speak-translation" aria-label="Read aloud"><i data-lucide="volume-2" aria-hidden="true"></i></button></div><div class="translator-submit"><button class="icon-button" type="button" data-action="translate-document" aria-label="Translate a document"><i data-lucide="file-type-2" aria-hidden="true"></i></button><button class="primary-button" type="button" data-generate="translate"><i data-lucide="languages" aria-hidden="true"></i>Translate</button></div></div>
+                </div>
+                <div id="translate-result" class="result-panel" hidden><strong>Translation</strong><p id="translated-copy">Browser agents are evolving from answering questions to completing multi-step tasks.</p></div>
+                <div class="translate-also">You can also translate<div class="translate-types"><button class="translate-type" type="button" data-action="translate-document"><i data-lucide="file-text" aria-hidden="true"></i>PDF</button><button class="translate-type" type="button" data-action="translate-long-text"><i data-lucide="align-left" aria-hidden="true"></i>Long text</button><button class="translate-type" type="button" data-view-target="ocr"><i data-lucide="image" aria-hidden="true"></i>Image</button></div></div>
+              </div>
+            </section>
+
+            <section class="workspace-view" data-view="ocr" hidden>
+              <header class="view-header"><div class="view-heading"><button class="icon-button" type="button" data-action="back-mode" aria-label="Back to previous mode"><i data-lucide="arrow-left" aria-hidden="true"></i></button><span class="quick-icon blue"><i data-lucide="scan-line" aria-hidden="true"></i></span><div><strong>OCR</strong><span>Extract text from images and PDFs</span></div></div></header>
+              <div class="tool-body"><div class="dropzone"><div><i data-lucide="scan-line" aria-hidden="true"></i><strong>Drop an image or PDF</strong><p>Or capture an area from this webpage</p><div style="display:flex;gap:8px;justify-content:center"><button class="secondary-button" type="button" data-action="fake-upload">Choose file</button><button class="secondary-button" type="button" data-action="capture-area">Capture page</button></div></div></div><div id="ocr-result" class="result-panel" hidden><strong>12 lines extracted</strong><p>AI Browser Agents Are Moving From Answers to Actions<br>Users rarely need a single answer. They need a comparison, a decision, a draft, or a finished artifact.</p></div></div>
+            </section>
+
+            <section class="workspace-view" data-view="settings" hidden>
+              <header class="view-header"><div class="view-heading"><button class="icon-button" type="button" data-action="back-mode" aria-label="Back to previous mode"><i data-lucide="arrow-left" aria-hidden="true"></i></button><span class="quick-icon violet"><i data-lucide="settings-2" aria-hidden="true"></i></span><div><strong>Settings</strong><span>Browser access and preferences</span></div></div></header>
+              <div class="tool-body"><div class="setting-list"><label class="setting-row"><span><strong>Read current page</strong><span>Only read visible content when you start a task</span></span><input type="checkbox" checked></label><label class="setting-row"><span><strong>Always allow this site</strong><span id="setting-domain">studiojournal.example</span></span><input type="checkbox"></label><label class="setting-row"><span><strong>Confirm before submitting</strong><span>Ask before forms, messages, and send actions</span></span><input type="checkbox" checked></label><label class="setting-row"><span><strong>Keep task history</strong><span>Sync recent tasks to Yukie Cloud</span></span><input type="checkbox" checked></label></div></div>
+            </section>
+
+            <section class="workspace-view" data-view="downloads" hidden>
+              <header class="view-header"><div class="view-heading"><button class="icon-button" type="button" data-action="back-mode" aria-label="Back to previous mode"><i data-lucide="arrow-left" aria-hidden="true"></i></button><span class="quick-icon blue"><i data-lucide="download" aria-hidden="true"></i></span><div><strong>Get Yukie</strong><span>Continue tasks across devices</span></div></div></header>
+              <div class="tool-body"><div class="tool-intro"><h2>Use Yukie on every device</h2><p>Sign in with the same account to sync tasks, sources, and generated work.</p></div><div class="download-grid"><div class="download-item"><i data-lucide="smartphone" aria-hidden="true"></i><strong>Mobile</strong><span>iOS and Android</span><button class="secondary-button" type="button" data-download="mobile">Show QR code</button></div><div class="download-item"><i data-lucide="monitor-down" aria-hidden="true"></i><strong>Desktop</strong><span>macOS and Windows</span><button class="secondary-button" type="button" data-download="desktop">Download app</button></div></div><div id="download-result" class="result-panel" hidden><strong>Download ready</strong><p>The live extension will show a QR code or the installer for your system.</p></div></div>
+            </section>
+
+            <section class="workspace-view" data-view="profile" hidden>
+              <header class="view-header"><div class="view-heading"><button class="icon-button" type="button" data-action="back-mode" aria-label="Back to previous mode"><i data-lucide="arrow-left" aria-hidden="true"></i></button><span class="quick-icon violet"><i data-lucide="user-round" aria-hidden="true"></i></span><div><strong>Profile</strong><span>GlobalGPT account</span></div></div></header>
+              <div class="tool-body"><div class="profile-hero"><span class="avatar">J</span><div><strong>Jazzy</strong><span>Connected to Yukie Cloud</span></div></div><div class="setting-list"><div class="setting-row"><span><strong>Usage this month</strong><span>Browser tasks and generation tools</span></span><strong>42 / 100</strong></div><div class="setting-row"><span><strong>Recent task</strong><span>Cross-tab competitor research</span></span><button class="text-button" type="button" data-view-target="home">View</button></div><div class="setting-row"><span><strong>Account and billing</strong><span>Manage your plan and workspace</span></span><button class="text-button" type="button" data-action="open-main">Manage</button></div></div></div>
+            </section>
+          </div>
+
+          <form id="composer" class="composer">
+            <div class="composer-meta">
+              <button id="model-select" class="model-select" type="button" data-action="choose-model" aria-haspopup="listbox" aria-controls="model-menu" aria-expanded="false" hidden><img id="model-logo" class="model-logo" src="https://static.glbgpt.com/logo2/4111.png" alt=""><span id="model-name">GPT-5.5</span><i data-lucide="chevron-down" aria-hidden="true"></i></button>
+              <span id="mode-indicator" class="mode-indicator"><span class="mini-y">Y</span>Yukie Agent</span>
+              <div id="composer-context" class="composer-context"><i data-lucide="link-2" aria-hidden="true"></i><span data-current-page>AI Browser Agents: 2026 Landscape</span></div>
+              <div id="agent-session-actions" class="chat-session-actions"><button class="new-task-button" type="button" data-action="new-yukie-task"><i data-lucide="plus" aria-hidden="true"></i>New task</button></div>
+              <div id="chat-session-actions" class="chat-session-actions" hidden><button class="new-task-button" type="button" data-action="new-chat"><i data-lucide="plus" aria-hidden="true"></i>New task</button></div>
+            </div>
+            <div class="composer-box">
+              <div id="chat-context-chip" class="chat-context-chip" hidden><i data-lucide="globe-2" aria-hidden="true"></i><span data-current-page>AI Browser Agents: 2026 Landscape</span></div>
+              <textarea id="prompt" aria-label="Send a message to Yukie" placeholder="Describe a task. Yukie will plan before it acts..."></textarea>
+              <div class="composer-actions"><div class="composer-tools"><button class="icon-button" type="button" aria-label="Attach file" data-action="attach"><i data-lucide="paperclip" aria-hidden="true"></i></button><button class="icon-button" type="button" aria-label="Capture webpage" data-action="capture-area"><i data-lucide="scan-line" aria-hidden="true"></i></button></div><button id="send-button" class="send-button" type="submit" aria-label="Send"><i data-lucide="arrow-up" aria-hidden="true"></i></button></div>
+            </div>
+            <div id="model-menu" class="model-menu" role="listbox" aria-label="Chat model" hidden>
+              <div class="model-menu-header"><strong>Chat models</strong><span>9 available</span></div>
+              <div id="model-list" class="model-list">
+                <button class="model-option active" type="button" role="option" aria-selected="true" data-model="GPT-5.5"><img class="model-logo" src="https://static.glbgpt.com/logo2/4111.png" alt=""><span class="model-option-copy"><strong>GPT-5.5</strong><span>Complex reasoning and agents</span></span><i data-lucide="check" aria-hidden="true"></i></button>
+                <button class="model-option" type="button" role="option" aria-selected="false" data-model="GPT-5.4"><img class="model-logo" src="https://static.glbgpt.com/logo2/4111.png" alt=""><span class="model-option-copy"><strong>GPT-5.4</strong><span>Reliable everyday work</span></span></button>
+                <button class="model-option" type="button" role="option" aria-selected="false" data-model="Claude Opus 4.7"><img class="model-logo" src="https://static.glbgpt.com/logo2/4336.png" alt=""><span class="model-option-copy"><strong>Claude Opus 4.7</strong><span>Deep writing and analysis</span></span></button>
+                <button class="model-option" type="button" role="option" aria-selected="false" data-model="Claude Sonnet 5.5"><img class="model-logo" src="https://static.glbgpt.com/logo2/4336.png" alt=""><span class="model-option-copy"><strong>Claude Sonnet 5.5</strong><span>Fast coding and agents</span></span></button>
+                <button class="model-option" type="button" role="option" aria-selected="false" data-model="Gemini 3 Pro"><img class="model-logo" src="https://static.glbgpt.com/logo2/4110.png" alt=""><span class="model-option-copy"><strong>Gemini 3 Pro</strong><span>Long context and multimodal</span></span></button>
+                <button class="model-option" type="button" role="option" aria-selected="false" data-model="Grok 4.1"><img class="model-logo" src="https://static.glbgpt.com/logo2/4222.png" alt=""><span class="model-option-copy"><strong>Grok 4.1</strong><span>Current information and reasoning</span></span></button>
+                <button class="model-option" type="button" role="option" aria-selected="false" data-model="DeepSeek V3.2"><img class="model-logo" src="https://static.glbgpt.com/logo2/4225.png" alt=""><span class="model-option-copy"><strong>DeepSeek V3.2</strong><span>Efficient reasoning and code</span></span></button>
+                <button class="model-option" type="button" role="option" aria-selected="false" data-model="Kimi K2"><img class="model-logo" src="https://static.glbgpt.com/logo2/4334.png" alt=""><span class="model-option-copy"><strong>Kimi K2</strong><span>Long documents and research</span></span></button>
+                <button class="model-option" type="button" role="option" aria-selected="false" data-model="Qwen 3.8 Max"><img class="model-logo" src="https://static.glbgpt.com/logo2/4229.png" alt=""><span class="model-option-copy"><strong>Qwen 3.8 Max</strong><span>Multilingual complex tasks</span></span></button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <section id="history-panel" class="history-panel" aria-label="Yukie history" hidden>
+          <div class="history-header"><div class="history-header-main"><span class="history-title-icon"><i data-lucide="history" aria-hidden="true"></i></span><div class="history-header-copy"><strong id="history-title">Yukie history</strong><span id="history-subtitle">Tasks completed with Yukie</span></div></div><button class="icon-button" type="button" data-action="toggle-history" aria-label="Close history"><i data-lucide="x" aria-hidden="true"></i></button></div>
+          <div class="history-list">
+            <section class="history-group" data-history-group><div class="history-group-label">Today</div>
+              <button class="history-item" type="button" data-history="competitors" data-history-type="yukie"><span class="history-item-icon"><i data-lucide="search" aria-hidden="true"></i></span><span class="history-item-copy"><strong>Browser agent competitor brief</strong><span>3 tabs · 12 min ago</span></span><span class="history-kind">Yukie</span></button>
+              <button class="history-item" type="button" data-history="pricing" data-history-type="chat"><span class="history-item-icon"><i data-lucide="message-square-text" aria-hidden="true"></i></span><span class="history-item-copy"><strong>Compare analytics pricing</strong><span>GPT-5.5 · 46 min ago</span></span><span class="history-kind">Chat</span></button>
+              <button class="history-item" type="button" data-history="launch-deck" data-history-type="yukie"><span class="history-item-icon"><i data-lucide="presentation" aria-hidden="true"></i></span><span class="history-item-copy"><strong>Launch strategy deck</strong><span>12 slides · 2 hr ago</span></span><span class="history-kind">Yukie</span></button>
+            </section>
+            <section class="history-group" data-history-group><div class="history-group-label">Yesterday</div>
+              <button class="history-item" type="button" data-history="youtube" data-history-type="chat"><span class="history-item-icon"><i data-lucide="youtube" aria-hidden="true"></i></span><span class="history-item-copy"><strong>Browser agents video notes</strong><span>Gemini 3 Pro · YouTube</span></span><span class="history-kind">Chat</span></button>
+              <button class="history-item" type="button" data-history="page-report" data-history-type="yukie"><span class="history-item-icon"><i data-lucide="file-check-2" aria-hidden="true"></i></span><span class="history-item-copy"><strong>Page research report</strong><span>8 pages · Completed</span></span><span class="history-kind">Yukie</span></button>
+            </section>
+            <section class="history-group" data-history-group><div class="history-group-label">Earlier</div>
+              <button class="history-item" type="button" data-history="selection" data-history-type="chat"><span class="history-item-icon"><i data-lucide="scan-text" aria-hidden="true"></i></span><span class="history-item-copy"><strong>Explain selected paragraph</strong><span>Claude Opus 4.7 · Oct 10</span></span><span class="history-kind">Chat</span></button>
+              <button class="history-item" type="button" data-history="permission-review" data-history-type="chat"><span class="history-item-icon"><i data-lucide="shield-check" aria-hidden="true"></i></span><span class="history-item-copy"><strong>Review browser permissions</strong><span>DeepSeek V3.2 · Oct 8</span></span><span class="history-kind">Chat</span></button>
+            </section>
+          </div>
+        </section>
+
+        <nav class="rail" aria-label="Yukie tools">
+          <div class="rail-group">
+            <button class="rail-button" type="button" data-browser-action="close-extension" data-tip="Collapse sidebar" aria-label="Collapse sidebar" aria-controls="extension-panel"><i data-lucide="x" aria-hidden="true"></i></button>
+            <button class="rail-button" type="button" data-action="open-main" data-tip="Open full Yukie" aria-label="Open full Yukie"><i data-lucide="maximize-2" aria-hidden="true"></i></button>
+            <button class="rail-button active" type="button" data-view-target="home" data-tip="Yukie" aria-label="Yukie home"><span class="rail-y">Y</span></button>
+            <button class="rail-button" type="button" data-view-target="chat" data-tip="Chat" aria-label="Chat"><i data-lucide="message-square" aria-hidden="true"></i></button>
+            <button class="rail-button" type="button" data-view-target="image" data-tip="Image" aria-label="Image"><i data-lucide="image" aria-hidden="true"></i></button>
+            <button class="rail-button" type="button" data-view-target="video" data-tip="Video" aria-label="Video"><i data-lucide="video" aria-hidden="true"></i></button>
+            <button class="rail-button" type="button" data-view-target="audio" data-tip="Audio" aria-label="Audio"><i data-lucide="audio-lines" aria-hidden="true"></i></button>
+            <button class="rail-button" type="button" data-view-target="translate" data-tip="Translate" aria-label="Translate"><i data-lucide="languages" aria-hidden="true"></i></button>
+            <button class="rail-button" type="button" data-view-target="ocr" data-tip="OCR" aria-label="OCR"><i data-lucide="scan-line" aria-hidden="true"></i></button>
+          </div>
+          <div class="rail-group rail-bottom">
+            <div class="rail-separator" aria-hidden="true"></div>
+            <button class="rail-button" type="button" data-view-target="downloads" data-tip="Get Yukie apps" aria-label="Get Yukie apps"><i data-lucide="download" aria-hidden="true"></i></button>
+            <button class="rail-button" type="button" data-view-target="settings" data-tip="Settings" aria-label="Settings"><i data-lucide="settings-2" aria-hidden="true"></i></button>
+            <button id="account-button" class="rail-button" type="button" data-action="open-login" data-tip="Sign in" aria-label="Sign in"><i data-lucide="user-round" aria-hidden="true"></i></button>
+          </div>
+        </nav>
+        <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+        <div id="auth-overlay" class="auth-overlay" hidden>
+          <section class="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+            <button class="icon-button auth-close" type="button" data-auth-action="close" aria-label="Close sign in"><i data-lucide="x" aria-hidden="true"></i></button>
+
+            <div data-auth-step="login">
+              <div class="auth-brand"><img src="https://static.futureshareai.com/glb_v3/logoBg.png" alt=""><span>GlobalGPT</span></div>
+              <h2 id="auth-title">Welcome to GlobalGPT</h2>
+              <p class="auth-subtitle">Sign in to continue with Yukie.</p>
+              <button class="auth-provider" type="button" data-auth-action="provider"><i data-lucide="chrome" aria-hidden="true"></i>Continue with Google</button>
+              <button class="auth-provider" type="button" data-auth-action="provider"><i data-lucide="apple" aria-hidden="true"></i>Continue with Apple</button>
+              <button class="auth-provider" type="button" data-auth-action="provider"><i data-lucide="wallet-cards" aria-hidden="true"></i>Continue with MetaMask</button>
+              <div class="auth-divider">OR</div>
+              <input id="auth-email" class="auth-email" type="email" autocomplete="email" placeholder="Email">
+              <p id="auth-email-error" class="auth-error" hidden>Enter a valid email.</p>
+              <button class="auth-continue" type="button" data-auth-action="continue-email">Continue</button>
+              <label class="auth-consent"><input id="auth-consent" type="checkbox" checked><span>I agree to receive account and product updates.</span></label>
+              <p class="auth-terms">By continuing, you agree to the <a href="https://www.glbgpt.com/terms" target="_blank" rel="noopener">Terms</a> and <a href="https://www.glbgpt.com/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</p>
+            </div>
+
+            <div data-auth-step="code" hidden>
+              <button class="auth-back" type="button" data-auth-action="back-login"><i data-lucide="arrow-left" aria-hidden="true"></i>Back</button>
+              <h2>Check your email</h2>
+              <p class="auth-subtitle">Code sent to <strong id="auth-code-email">you@example.com</strong></p>
+              <div class="auth-code-grid" aria-label="Verification code">
+                <input class="auth-code" inputmode="numeric" maxlength="1" aria-label="Digit 1">
+                <input class="auth-code" inputmode="numeric" maxlength="1" aria-label="Digit 2">
+                <input class="auth-code" inputmode="numeric" maxlength="1" aria-label="Digit 3">
+                <input class="auth-code" inputmode="numeric" maxlength="1" aria-label="Digit 4">
+                <input class="auth-code" inputmode="numeric" maxlength="1" aria-label="Digit 5">
+                <input class="auth-code" inputmode="numeric" maxlength="1" aria-label="Digit 6">
+              </div>
+              <p id="auth-code-error" class="auth-error" hidden>Enter the 6-digit code.</p>
+              <button class="auth-continue" type="button" data-auth-action="verify-code">Verify</button>
+            </div>
+
+            <div data-auth-step="authorize" hidden>
+              <div class="auth-brand"><span class="mini-y">Y</span><span>Yukie for Chrome</span></div>
+              <h2>Connect Yukie to Chrome</h2>
+              <p class="auth-subtitle">Choose what Yukie can use.</p>
+              <div class="auth-permissions">
+                <div class="auth-permission"><span><i data-lucide="cloud" aria-hidden="true"></i></span><span><strong>Sync chats and files</strong><small>Keep work available in Yukie.</small></span></div>
+                <div class="auth-permission"><span><i data-lucide="scan-text" aria-hidden="true"></i></span><span><strong>Read pages when asked</strong><small>No background reading.</small></span></div>
+                <div class="auth-permission"><span><i data-lucide="shield-check" aria-hidden="true"></i></span><span><strong>Confirm before sending</strong><small>You approve sensitive actions.</small></span></div>
+              </div>
+              <button class="auth-continue" type="button" data-auth-action="allow">Allow &amp; continue</button>
+              <button class="auth-secondary" type="button" data-auth-action="close">Not now</button>
+            </div>
+
+            <div data-auth-step="success" hidden>
+              <div class="auth-success-mark"><i data-lucide="check" aria-hidden="true"></i></div>
+              <h2>Yukie is connected</h2>
+              <p class="auth-success-copy">Your account and browser are ready.</p>
+              <button class="auth-continue" type="button" data-auth-action="done">Done</button>
+            </div>
+          </section>
+        </div>
+      </aside>
+      <button id="side-panel-launcher" class="side-panel-launcher" type="button" data-browser-action="open-extension" aria-label="Open Yukie side panel" aria-controls="extension-panel" aria-expanded="true" hidden><img src="https://static.futureshareai.com/glb_v3/logoBg.png" alt="" draggable="false"></button>
+    </div>
+
+    <div id="page-context-menu" class="page-context-menu" role="menu" aria-label="Send webpage content to Yukie" hidden>
+      <div class="context-menu-brand"><img src="https://static.futureshareai.com/glb_v3/logoBg.png" alt=""><span>Send to Yukie</span></div>
+      <div id="context-selection" class="context-menu-selection" hidden></div>
+      <button class="context-menu-item" type="button" role="menuitem" data-context-action="ask-selection"><i data-lucide="message-square-text" aria-hidden="true"></i><span id="context-ask-label">Ask about selection</span></button>
+      <button class="context-menu-item" type="button" role="menuitem" data-context-action="send-selection"><i data-lucide="send" aria-hidden="true"></i><span>Send to Yukie</span></button>
+      <div class="context-menu-separator" aria-hidden="true"></div>
+      <button class="context-menu-item" type="button" role="menuitem" data-context-action="summarize-page"><i data-lucide="notebook-tabs" aria-hidden="true"></i><span>Summarize page</span></button>
+      <button class="context-menu-item" type="button" role="menuitem" data-context-action="create-from-page"><i data-lucide="wand-sparkles" aria-hidden="true"></i><span>Create from page</span></button>
+    </div>
+  </main>
+
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer onload="window.dispatchEvent(new Event('lucide-ready'))"></script>
+  <script>
+    (() => {
+      const pages = {
+        article: {
+          title: 'AI Browser Agents: 2026 Landscape',
+          address: 'studiojournal.example/research/browser-agents-2026',
+          domain: 'studiojournal.example',
+          brand: 'Studio Journal',
+          links: ['Research', 'Products', 'About'],
+          html: '<div class="article-kicker">RESEARCH · BROWSER AI</div><h1>AI Browser Agents Are Moving From Answers to Actions</h1><div class="article-meta">By Studio Journal Research · October 2026 · 14 min read</div><p class="article-lede">The next generation of AI browser tools does not stop at summarizing a page. It plans a task, navigates across sources, gathers structured evidence, and asks for approval before an irreversible action.</p><h2>From page context to task context</h2><p>Users rarely need a single answer. They need a comparison, a decision, a draft, or a finished artifact. A browser agent connects the page in front of the user with the tools that complete the job.</p><table class="web-table"><thead><tr><th>Capability</th><th>Why it matters</th></tr></thead><tbody><tr><td>Multi-page research</td><td>Evidence is distributed across sites.</td></tr><tr><td>Browser actions</td><td>Many workflows have no API.</td></tr><tr><td>Structured delivery</td><td>Results need to be reused.</td></tr></tbody></table><h2>Trust is part of the product</h2><p>Every source, step, and permission should be visible. The user should know what the agent has read and what it plans to do next.</p>'
+        },
+        youtube: {
+          title: 'Browser Agents Explained - YouTube',
+          address: 'youtube.com/watch?v=browser-agents-2026',
+          domain: 'youtube.com',
+          brand: 'YouTube',
+          links: ['Home', 'Subscriptions', 'Library'],
+          html: '<div class="article-kicker">VIDEO · 18:42</div><h1>Browser Agents Explained: From Answers to Actions</h1><div class="article-meta">Product Systems · 428K views · Oct 9, 2026</div><div class="video-frame"><span class="play"><i data-lucide="play" aria-hidden="true"></i></span></div><p class="article-lede">A practical walkthrough of how browser agents read pages, navigate tabs, use tools, and pause before sensitive actions.</p><h2>Chapters</h2><p>00:00 Why browser context matters<br>03:18 Multi-tab research<br>08:42 Actions and permissions<br>13:16 Deliverables and workspace handoff</p>'
+        },
+        pricing: {
+          title: 'Acme Analytics Pricing',
+          address: 'acme.example/pricing',
+          domain: 'acme.example',
+          brand: 'Acme Analytics',
+          links: ['Product', 'Pricing', 'Customers'],
+          html: '<div class="article-kicker">PRICING</div><h1>Plans that scale with your analytics team</h1><div class="article-meta">Updated October 2026</div><p class="article-lede">Start with essential reporting, then add collaboration, automation, and enterprise controls.</p><table class="web-table"><thead><tr><th>Plan</th><th>Monthly</th><th>Highlights</th></tr></thead><tbody><tr><td>Starter</td><td>$0</td><td>3 dashboards</td></tr><tr><td>Pro</td><td>$29</td><td>Unlimited reports</td></tr><tr><td>Business</td><td>$99</td><td>SSO and audit logs</td></tr></tbody></table><h2>Plan limits</h2><p>Automation runs and data retention vary by plan. Contact sales is required for enterprise deployment.</p>'
+        }
+      };
+
+      const viewNames = ['home', 'chat', 'image', 'video', 'audio', 'translate', 'ocr', 'settings', 'downloads', 'profile'];
+      const productRoutes = {
+        image: 'https://www.glbgpt.com/image-generator',
+        video: 'https://www.glbgpt.com/video-generator',
+        audio: 'https://www.glbgpt.com/audio-generator'
+      };
+      const workspace = document.getElementById('workspace');
+      const composer = document.getElementById('composer');
+      const prompt = document.getElementById('prompt');
+      const modelSelect = document.getElementById('model-select');
+      const modelName = document.getElementById('model-name');
+      const modelLogo = document.getElementById('model-logo');
+      const modelMenu = document.getElementById('model-menu');
+      const modeIndicator = document.getElementById('mode-indicator');
+      const composerContext = document.getElementById('composer-context');
+      const agentSessionActions = document.getElementById('agent-session-actions');
+      const chatSessionActions = document.getElementById('chat-session-actions');
+      const chatContextChip = document.getElementById('chat-context-chip');
+      const sendButton = document.getElementById('send-button');
+      const historyPanel = document.getElementById('history-panel');
+      const historyTitle = document.getElementById('history-title');
+      const historySubtitle = document.getElementById('history-subtitle');
+      const chatEmpty = document.getElementById('chat-empty');
+      const messageList = document.getElementById('message-list');
+      const agentEmpty = document.getElementById('agent-empty');
+      const agentTask = document.getElementById('agent-task');
+      const agentMessageList = document.getElementById('agent-message-list');
+      const toast = document.getElementById('toast');
+      const browserContent = document.getElementById('browser-content');
+      const extensionPanel = document.getElementById('extension-panel');
+      const extensionToggle = document.getElementById('extension-toggle');
+      const sidePanelLauncher = document.getElementById('side-panel-launcher');
+      const extensionPicker = document.getElementById('extension-picker');
+      const webpage = document.querySelector('.webpage');
+      const pageContextMenu = document.getElementById('page-context-menu');
+      const contextSelection = document.getElementById('context-selection');
+      const authOverlay = document.getElementById('auth-overlay');
+      const accountButton = document.getElementById('account-button');
+      const authEmail = document.getElementById('auth-email');
+      let currentView = 'home';
+      let primaryView = 'home';
+      let currentPage = 'article';
+      let contextMenuText = '';
+      let contextMenuHasSelection = false;
+      let agentUsesPageContext = false;
+      let lastAgentUsesPageContext = false;
+      let toastTimer;
+      let generationTimer = null;
+      const mediaGenerationTimers = { image: null, video: null };
+      let activeThinking = null;
+      let pendingResponse = null;
+      let launcherDrag = null;
+      let launcherIgnoreClickUntil = 0;
+
+      const chatModels = {
+        'GPT-5.5': 'https://static.glbgpt.com/logo2/4111.png',
+        'GPT-5.4': 'https://static.glbgpt.com/logo2/4111.png',
+        'Claude Opus 4.7': 'https://static.glbgpt.com/logo2/4336.png',
+        'Claude Sonnet 5.5': 'https://static.glbgpt.com/logo2/4336.png',
+        'Gemini 3 Pro': 'https://static.glbgpt.com/logo2/4110.png',
+        'Grok 4.1': 'https://static.glbgpt.com/logo2/4222.png',
+        'DeepSeek V3.2': 'https://static.glbgpt.com/logo2/4225.png',
+        'Kimi K2': 'https://static.glbgpt.com/logo2/4334.png',
+        'Qwen 3.8 Max': 'https://static.glbgpt.com/logo2/4229.png'
+      };
+
+      const mediaModels = {
+        image: {
+          'GPT Image 2.5': { mark: 'GI', description: 'High-fidelity generation and editing', credits: '320 credits' },
+          'Nano Banana 2.1': { mark: 'NB', description: 'Fast multimodal generation and editing', credits: '160 credits' },
+          Midjourney: { mark: 'MJ', description: 'Art-directed and highly stylized images', credits: '200 credits' },
+          'Seedream 5.0 Pro': { mark: 'S5', description: 'Multiple references and 4K output', credits: '240 credits' },
+          'Agnes Image 2.1 Flash': { mark: 'AI', description: 'Fast, affordable multi-reference output', credits: '60 credits' }
+        },
+        video: {
+          'Seedance 2.5': { mark: 'S2', description: 'Cinematic motion and strong prompt following', credits: '7,300 credits' },
+          'Wan 3.0': { mark: 'W3', description: 'Text, image, video, audio, and page inputs', credits: '5,600 credits' },
+          'Agnes Video 2.5': { mark: 'AV', description: 'Fast, production-ready video generation', credits: '4,200 credits' },
+          'MiniMax-H3': { mark: 'H3', description: 'Cinematic video creation and camera control', credits: '6,800 credits' },
+          'Sora 2': { mark: 'S2', description: 'Story-driven generation from text and images', credits: '7,600 credits' }
+        }
+      };
+
+      function refreshIcons() {
+        if (window.lucide) window.lucide.createIcons({ attrs: { width: 17, height: 17, 'stroke-width': 1.8 } });
+      }
+
+      window.addEventListener('lucide-ready', refreshIcons);
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.hidden = false;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { toast.hidden = true; }, 2400);
+      }
+
+      function hideContextMenu() {
+        pageContextMenu.hidden = true;
+      }
+
+      function setExtensionPickerOpen(open) {
+        extensionPicker.hidden = !open;
+        extensionToggle.setAttribute('aria-expanded', String(open));
+        if (open) refreshIcons();
+      }
+
+      function setExtensionOpen(open) {
+        extensionPanel.hidden = !open;
+        sidePanelLauncher.hidden = open;
+        sidePanelLauncher.setAttribute('aria-expanded', String(open));
+        browserContent.classList.toggle('panel-closed', !open);
+        extensionToggle.classList.toggle('active', open);
+        extensionToggle.setAttribute('aria-pressed', String(open));
+        extensionToggle.setAttribute('aria-label', open ? 'Close Yukie side panel' : 'Open GlobalGPT extension menu');
+        if (open) setExtensionPickerOpen(false);
+        if (!open) hideContextMenu();
+      }
+
+      function clampLauncherTop(top) {
+        const contentRect = browserContent.getBoundingClientRect();
+        const half = sidePanelLauncher.offsetHeight / 2;
+        const edgeGap = 12;
+        const minimum = half + edgeGap;
+        const maximum = Math.max(minimum, contentRect.height - half - edgeGap);
+        return Math.min(Math.max(top, minimum), maximum);
+      }
+
+      sidePanelLauncher.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0) return;
+        const contentRect = browserContent.getBoundingClientRect();
+        const launcherRect = sidePanelLauncher.getBoundingClientRect();
+        launcherDrag = {
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          startTop: launcherRect.top + launcherRect.height / 2 - contentRect.top,
+          moved: false
+        };
+        sidePanelLauncher.setPointerCapture(event.pointerId);
+      });
+
+      window.addEventListener('pointermove', (event) => {
+        if (!launcherDrag || launcherDrag.pointerId !== event.pointerId) return;
+        const deltaX = event.clientX - launcherDrag.startX;
+        const deltaY = event.clientY - launcherDrag.startY;
+        if (!launcherDrag.moved && Math.hypot(deltaX, deltaY) < 4) return;
+        launcherDrag.moved = true;
+        sidePanelLauncher.classList.add('dragging');
+        sidePanelLauncher.style.top = `${clampLauncherTop(launcherDrag.startTop + deltaY)}px`;
+        event.preventDefault();
+      });
+
+      function finishLauncherDrag(event) {
+        if (!launcherDrag || launcherDrag.pointerId !== event.pointerId) return;
+        if (launcherDrag.moved) launcherIgnoreClickUntil = performance.now() + 250;
+        sidePanelLauncher.classList.remove('dragging');
+        if (sidePanelLauncher.hasPointerCapture(event.pointerId)) sidePanelLauncher.releasePointerCapture(event.pointerId);
+        launcherDrag = null;
+      }
+
+      window.addEventListener('pointerup', finishLauncherDrag);
+      window.addEventListener('pointercancel', finishLauncherDrag);
+      sidePanelLauncher.addEventListener('dragstart', (event) => event.preventDefault());
+      window.addEventListener('resize', () => {
+        if (!sidePanelLauncher.style.top) return;
+        sidePanelLauncher.style.top = `${clampLauncherTop(Number.parseFloat(sidePanelLauncher.style.top))}px`;
+      });
+
+      function setModelMenuOpen(open) {
+        modelMenu.hidden = !open;
+        modelSelect.setAttribute('aria-expanded', String(open));
+        if (!open) return;
+        historyPanel.hidden = true;
+        requestAnimationFrame(() => {
+          modelMenu.querySelector('.model-option.active')?.scrollIntoView({ block: 'nearest' });
+        });
+      }
+
+      function setHistoryPanelOpen(open) {
+        historyPanel.hidden = !open;
+        if (open) {
+          setModelMenuOpen(false);
+          const historyMode = primaryView === 'chat' ? 'chat' : 'yukie';
+          historyTitle.textContent = historyMode === 'chat' ? 'Chat history' : 'Yukie history';
+          historySubtitle.textContent = historyMode === 'chat' ? 'Conversations by model' : 'Tasks completed with Yukie';
+          historyPanel.setAttribute('aria-label', historyTitle.textContent);
+          filterHistory(historyMode);
+        }
+      }
+
+      function selectChatModel(selectedModel, showNotice = true) {
+        if (!chatModels[selectedModel]) return;
+        modelName.textContent = selectedModel;
+        modelLogo.src = chatModels[selectedModel];
+        if (currentView === 'chat') prompt.setAttribute('aria-label', `Send a message to ${selectedModel}`);
+        document.querySelectorAll('.model-option').forEach((button) => {
+          const active = button.dataset.model === selectedModel;
+          button.classList.toggle('active', active);
+          button.setAttribute('aria-selected', String(active));
+          button.querySelector('.lucide-check, [data-lucide="check"]')?.remove();
+          if (active) button.insertAdjacentHTML('beforeend', '<i data-lucide="check" aria-hidden="true"></i>');
+        });
+        setModelMenuOpen(false);
+        if (showNotice) showToast(`Switched to ${selectedModel}`);
+        refreshIcons();
+      }
+
+      function filterHistory(type) {
+        historyPanel.querySelectorAll('[data-history-filter]').forEach((button) => {
+          button.setAttribute('aria-pressed', String(button.dataset.historyFilter === type));
+        });
+        historyPanel.querySelectorAll('[data-history-type]').forEach((item) => {
+          item.hidden = type !== 'all' && item.dataset.historyType !== type;
+        });
+        historyPanel.querySelectorAll('[data-history-group]').forEach((group) => {
+          group.hidden = ![...group.querySelectorAll('[data-history-type]')].some((item) => !item.hidden);
+        });
+      }
+
+      function showAuthStep(step) {
+        authOverlay.querySelectorAll('[data-auth-step]').forEach((panel) => { panel.hidden = panel.dataset.authStep !== step; });
+        refreshIcons();
+      }
+
+      function openAuth() {
+        authOverlay.hidden = false;
+        showAuthStep('login');
+        document.getElementById('auth-email-error').hidden = true;
+        requestAnimationFrame(() => authEmail.focus());
+      }
+
+      function closeAuth() {
+        authOverlay.hidden = true;
+      }
+
+      function completeConnection() {
+        accountButton.innerHTML = '<span class="profile-dot">J</span>';
+        accountButton.removeAttribute('data-action');
+        accountButton.dataset.viewTarget = 'profile';
+        accountButton.dataset.tip = 'Profile';
+        accountButton.setAttribute('aria-label', 'Profile');
+        closeAuth();
+        showToast('Yukie connected');
+      }
+
+      function escapeHTML(value) {
+        return String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]);
+      }
+
+      function switchView(name) {
+        if (!viewNames.includes(name)) return;
+        currentView = name;
+        if (name === 'home' || name === 'chat') primaryView = name;
+        if (name === 'home' || name === 'chat') {
+          document.querySelectorAll('[data-extension-mode]').forEach((button) => {
+            const active = button.dataset.extensionMode === name;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-pressed', String(active));
+          });
+        }
+        document.querySelectorAll('[data-view]').forEach((view) => { view.hidden = view.dataset.view !== name; });
+        document.querySelectorAll('.rail-button[data-view-target]').forEach((button) => { button.classList.toggle('active', button.dataset.viewTarget === name); });
+        const usesComposer = name === 'home' || name === 'chat';
+        composer.hidden = !usesComposer;
+        modelSelect.hidden = name !== 'chat';
+        modeIndicator.hidden = name === 'chat';
+        composerContext.hidden = usesComposer;
+        agentSessionActions.hidden = name !== 'home';
+        chatSessionActions.hidden = name !== 'chat';
+        chatContextChip.hidden = name !== 'chat' && !agentUsesPageContext;
+        setModelMenuOpen(false);
+        setHistoryPanelOpen(false);
+        prompt.placeholder = name === 'chat' ? 'Ask about the current page...' : 'Describe a task. Yukie will plan before it acts...';
+        prompt.setAttribute('aria-label', name === 'chat' ? `Send a message to ${modelName.textContent}` : 'Send a message to Yukie');
+        workspace.scrollTop = 0;
+        refreshIcons();
+      }
+
+      function setPage(name) {
+        const page = pages[name];
+        if (!page) return;
+        currentPage = name;
+        document.querySelectorAll('.browser-tab').forEach((tab) => {
+          const active = tab.dataset.page === name;
+          tab.classList.toggle('active', active);
+          tab.setAttribute('aria-selected', String(active));
+        });
+        document.getElementById('address-copy').textContent = page.address;
+        document.getElementById('site-brand').textContent = page.brand;
+        document.getElementById('site-links').innerHTML = page.links.map((link) => `<span>${link}</span>`).join('');
+        document.getElementById('article-content').innerHTML = page.html;
+        document.querySelectorAll('[data-current-page]').forEach((element) => { element.textContent = page.title; });
+        document.getElementById('setting-domain').textContent = page.domain;
+        webpage.scrollTop = 0;
+        hideContextMenu();
+        refreshIcons();
+      }
+
+      function scrollConversation() {
+        requestAnimationFrame(() => { workspace.scrollTop = workspace.scrollHeight; });
+      }
+
+      function conversationFor(target) {
+        return target === 'agent'
+          ? { empty: agentEmpty, container: agentTask, list: agentMessageList }
+          : { empty: chatEmpty, container: null, list: messageList };
+      }
+
+      function addMessage(role, text, source, options = {}) {
+        const target = options.target || 'chat';
+        const conversation = conversationFor(target);
+        conversation.empty.hidden = true;
+        if (conversation.container) conversation.container.hidden = false;
+        conversation.list.hidden = false;
+        const message = document.createElement('div');
+        message.className = `message ${role}`;
+        message.dataset.response = text;
+        message.dataset.target = target;
+
+        if (role === 'user') {
+          message.innerHTML = `<div class="message-bubble">${escapeHTML(text)}</div>`;
+        } else {
+          const followups = options.followups || [];
+          const sourceTitle = options.sourceTitle || pages[currentPage].title;
+          const assistantName = target === 'agent' ? 'Yukie' : modelName.textContent;
+          const assistantMeta = target === 'agent' ? 'Agent task' : 'Page chat';
+          const assistantLogo = target === 'agent' ? 'agent-avatar.png' : chatModels[modelName.textContent];
+          const sourceMarkup = source ? `
+            <button class="citation-summary" type="button" data-action="toggle-sources"><i data-lucide="book-open" aria-hidden="true"></i>1 source<i data-lucide="chevron-down" aria-hidden="true"></i></button>
+            <div class="source-list" hidden><div class="source-item"><span class="source-index">1</span><span><strong>${escapeHTML(sourceTitle)}</strong><span>${escapeHTML(source)}</span></span></div></div>` : '';
+          const deliverableMarkup = options.deliverable ? `<div class="task-result-card"><div class="task-result-status"><i data-lucide="circle-check" aria-hidden="true"></i>Saved to Yukie</div><strong>${escapeHTML(options.deliverable.title)}</strong><p>${escapeHTML(options.deliverable.meta)} · View the full result in your workspace</p><div class="task-result-actions"><button class="primary-button" type="button" data-action="open-main"><i data-lucide="external-link" aria-hidden="true"></i>View in Yukie</button></div></div>` : '';
+          const followupMarkup = followups.length ? `<div class="follow-up-list">${followups.map((item) => `<button class="follow-up" type="button" data-followup="${escapeHTML(item)}">${escapeHTML(item)}</button>`).join('')}</div>` : '';
+          message.innerHTML = `<span class="message-avatar" style="background-image:url('${escapeHTML(assistantLogo)}')">${escapeHTML(assistantName.slice(0, 1))}</span><div class="message-stack"><div class="message-author"><strong>${escapeHTML(assistantName)}</strong><span>${escapeHTML(assistantMeta)}</span></div><div class="message-bubble">${escapeHTML(text)}</div>${sourceMarkup}${deliverableMarkup}<div class="message-actions"><button class="message-action" type="button" data-action="copy-message" aria-label="Copy answer"><i data-lucide="copy" aria-hidden="true"></i></button><button class="message-action" type="button" data-action="like-message" aria-label="Helpful"><i data-lucide="thumbs-up" aria-hidden="true"></i></button><button class="message-action" type="button" data-action="dislike-message" aria-label="Not helpful"><i data-lucide="thumbs-down" aria-hidden="true"></i></button><button class="message-action" type="button" data-action="regenerate" aria-label="Regenerate"><i data-lucide="rotate-cw" aria-hidden="true"></i></button></div>${followupMarkup}</div>`;
+        }
+
+        conversation.list.appendChild(message);
+        scrollConversation();
+        refreshIcons();
+        return message;
+      }
+
+      function setGenerating(isGenerating) {
+        sendButton.classList.toggle('generating', isGenerating);
+        sendButton.setAttribute('aria-label', isGenerating ? 'Stop generating' : 'Send');
+        sendButton.innerHTML = isGenerating ? '<i data-lucide="square" aria-hidden="true"></i>' : '<i data-lucide="arrow-up" aria-hidden="true"></i>';
+        refreshIcons();
+      }
+
+      function stopGeneration(showNotice = true) {
+        if (generationTimer) clearTimeout(generationTimer);
+        generationTimer = null;
+        pendingResponse = null;
+        if (activeThinking) activeThinking.remove();
+        activeThinking = null;
+        setGenerating(false);
+        if (showNotice) showToast('Generation stopped');
+      }
+
+      function startResponse(userText, response, source, followups = [], options = {}) {
+        if (generationTimer) stopGeneration(false);
+        const target = options.target || 'chat';
+        const conversation = conversationFor(target);
+        conversation.empty.hidden = true;
+        if (conversation.container) conversation.container.hidden = false;
+        conversation.list.hidden = false;
+        if (options.addUser !== false) addMessage('user', userText, null, { target });
+
+        activeThinking = document.createElement('div');
+        activeThinking.className = 'message assistant thinking-message';
+        const agentPlanningStep = options.usesPageContext ? 'Read the page and plan the work' : 'Plan the structure and content';
+        const thinkingModel = modelName.textContent;
+        const thinkingLogo = chatModels[thinkingModel];
+        activeThinking.innerHTML = target === 'agent'
+          ? `<span class="message-avatar">Y</span><div class="message-stack"><div class="message-author"><strong>Yukie</strong><span>Executing task</span></div><div class="thinking-card"><div class="thinking-title">Working on your task <span class="thinking-dots"><span></span><span></span><span></span></span></div><div class="thinking-step done"><i data-lucide="check" aria-hidden="true"></i>Understand the requested deliverable</div><div class="thinking-step active"><i data-lucide="loader-circle" aria-hidden="true"></i>${agentPlanningStep}</div><div class="thinking-step"><i data-lucide="circle" aria-hidden="true"></i>Create the first complete draft</div></div></div>`
+          : `<span class="message-avatar" style="background-image:url('${escapeHTML(thinkingLogo)}')">${escapeHTML(thinkingModel.slice(0, 1))}</span><div class="message-stack"><div class="message-author"><strong>${escapeHTML(thinkingModel)}</strong><span>Working with page context</span></div><div class="thinking-card"><div class="thinking-title">Working on it <span class="thinking-dots"><span></span><span></span><span></span></span></div><div class="thinking-step done"><i data-lucide="check" aria-hidden="true"></i>Read the current page</div><div class="thinking-step active"><i data-lucide="loader-circle" aria-hidden="true"></i>Review relevant page context</div><div class="thinking-step"><i data-lucide="circle" aria-hidden="true"></i>Draft a grounded answer</div></div></div>`;
+        conversation.list.appendChild(activeThinking);
+        pendingResponse = { response, source, followups, sourceTitle: options.sourceTitle, target, deliverable: options.deliverable };
+        setGenerating(true);
+        scrollConversation();
+        refreshIcons();
+
+        generationTimer = setTimeout(() => {
+          const completed = pendingResponse;
+          generationTimer = null;
+          pendingResponse = null;
+          if (activeThinking) activeThinking.remove();
+          activeThinking = null;
+          setGenerating(false);
+          addMessage('assistant', completed.response, completed.source, { followups: completed.followups, sourceTitle: completed.sourceTitle, target: completed.target, deliverable: completed.deliverable });
+        }, 900);
+      }
+
+      function resetChat(showNotice = true) {
+        stopGeneration(false);
+        messageList.innerHTML = '';
+        messageList.hidden = true;
+        chatEmpty.hidden = false;
+        prompt.value = '';
+        setHistoryPanelOpen(false);
+        setModelMenuOpen(false);
+        if (showNotice) showToast('New chat started');
+      }
+
+      function resetAgentTask(showNotice = true) {
+        stopGeneration(false);
+        primaryView = 'home';
+        switchView('home');
+        agentMessageList.innerHTML = '';
+        agentTask.hidden = true;
+        agentEmpty.hidden = false;
+        prompt.value = '';
+        agentUsesPageContext = false;
+        workspace.scrollTop = 0;
+        if (showNotice) showToast('Back to Yukie · Ready for a new task');
+      }
+
+      function selectedSegment(name) {
+        return document.querySelector(`.segmented[data-segment="${name}"] button[aria-pressed="true"]`)?.textContent.trim() || '';
+      }
+
+      function updateMediaModel(type) {
+        const select = document.getElementById(`${type}-model`);
+        const config = mediaModels[type]?.[select.value];
+        if (!config) return;
+        const note = document.getElementById(`${type}-model-note`);
+        note.querySelector('.model-mark').textContent = config.mark;
+        note.querySelector('strong').textContent = select.value;
+        note.querySelector(':scope > span:nth-child(2) > span').textContent = config.description;
+        document.getElementById(`${type}-model-cost`).textContent = config.credits;
+        document.getElementById(`${type}-generate-cost`).textContent = `Estimated ${config.credits}`;
+      }
+
+      function resetMediaTool(type) {
+        if (mediaGenerationTimers[type]) clearTimeout(mediaGenerationTimers[type]);
+        mediaGenerationTimers[type] = null;
+        const view = document.querySelector(`[data-view="${type}"]`);
+        view.querySelectorAll('textarea, input').forEach((input) => { input.value = ''; });
+        const model = document.getElementById(`${type}-model`);
+        model.selectedIndex = 0;
+        if (type === 'video') document.getElementById('video-duration').value = '15 sec';
+        view.querySelectorAll('.segmented').forEach((group) => {
+          group.querySelectorAll('button').forEach((button, index) => button.setAttribute('aria-pressed', String(index === 0)));
+        });
+        document.getElementById(`${type}-reference-chip`).hidden = true;
+        view.querySelector(`.reference-upload[data-reference="${type}"]`).hidden = false;
+        document.getElementById(`${type}-progress`).hidden = true;
+        document.getElementById(`${type}-result`).hidden = true;
+        const button = document.getElementById(`${type}-generate-button`);
+        button.disabled = false;
+        button.innerHTML = type === 'image'
+          ? '<i data-lucide="sparkles" aria-hidden="true"></i>Generate image'
+          : '<i data-lucide="clapperboard" aria-hidden="true"></i>Generate video';
+        updateMediaModel(type);
+        refreshIcons();
+      }
+
+      function runMediaGeneration(type) {
+        const input = document.getElementById(`${type}-prompt`);
+        if (!input.value.trim()) {
+          showToast(`Describe the ${type} you want to create`);
+          input.focus();
+          return;
+        }
+        if (mediaGenerationTimers[type]) clearTimeout(mediaGenerationTimers[type]);
+        const progress = document.getElementById(`${type}-progress`);
+        const result = document.getElementById(`${type}-result`);
+        const button = document.getElementById(`${type}-generate-button`);
+        result.hidden = true;
+        progress.hidden = false;
+        button.disabled = true;
+        button.innerHTML = '<i data-lucide="loader-circle" aria-hidden="true"></i>Generating...';
+        progress.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        refreshIcons();
+
+        mediaGenerationTimers[type] = setTimeout(() => {
+          mediaGenerationTimers[type] = null;
+          const model = document.getElementById(`${type}-model`).value;
+          const ratio = selectedSegment(`${type}-ratio`);
+          document.getElementById(`${type}-result-meta`).textContent = type === 'image'
+            ? `${model} · ${ratio} · Saved to GlobalGPT`
+            : `${model} · ${ratio} · ${document.getElementById('video-duration').value} · Saved to GlobalGPT`;
+          progress.hidden = true;
+          result.hidden = false;
+          button.disabled = false;
+          button.innerHTML = type === 'image'
+            ? '<i data-lucide="sparkles" aria-hidden="true"></i>Generate image'
+            : '<i data-lucide="clapperboard" aria-hidden="true"></i>Generate video';
+          result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          showToast(type === 'image' ? 'Image saved to GlobalGPT' : 'Video saved to GlobalGPT');
+          refreshIcons();
+        }, type === 'image' ? 1200 : 1500);
+      }
+
+      const agentPromptPresets = {
+        ppt: 'Create a presentation about [topic]. Build a clear slide-by-slide outline for [audience].',
+        document: 'Write a [document type] about [topic]. Include a short executive summary.',
+        image: 'Create an image for [purpose]. Style: [visual direction].',
+        video: 'Create a short video about [topic]. Draft the script and storyboard first.',
+        'page-create': 'Create the following deliverable from this page: [deliverable]. Preserve the key facts and cite the page as a source.'
+      };
+
+      function primeAgentPrompt(type) {
+        const preset = agentPromptPresets[type];
+        if (!preset) return;
+        agentUsesPageContext = type === 'page-create';
+        switchView('home');
+        prompt.value = preset;
+        prompt.focus();
+        prompt.setSelectionRange(preset.indexOf('['), preset.indexOf(']') + 1);
+        showToast('Prompt added — edit it, then send');
+      }
+
+      function agentTaskConfig(value, usesPageContext) {
+        const task = value.toLowerCase();
+        const contextLine = usesPageContext ? ' I used the current page as a cited source.' : '';
+        const contextMeta = usesPageContext ? ' · Page source attached' : '';
+        if (task.includes('slide') || task.includes('presentation') || task.includes('ppt')) return { response: `I created the presentation and saved it to your Yukie workspace.${contextLine}`, deliverable: { title: '10-slide presentation', meta: `Editable deck${contextMeta}` }, followups: ['Adjust the audience', 'Add speaker notes'] };
+        if (task.includes('report') || task.includes('document') || task.includes('article')) return { response: `I drafted the document and saved it to your Yukie workspace.${contextLine}`, deliverable: { title: 'Report draft', meta: `1,240 words · 3 sections${contextMeta}` }, followups: ['Make it more concise', 'Add evidence'] };
+        if (task.includes('image') || task.includes('visual') || task.includes('cover')) return { response: `I created the image and saved it to your Yukie workspace.${contextLine}`, deliverable: { title: 'Image result', meta: `16:9 · Yukie Image${contextMeta}` }, followups: ['Try another style', 'Create a square version'] };
+        if (task.includes('video') || task.includes('storyboard')) return { response: `I created the video draft and saved it to your Yukie workspace.${contextLine}`, deliverable: { title: 'Video result', meta: `30 seconds${contextMeta}` }, followups: ['Change the duration', 'Create another version'] };
+        return { response: usesPageContext ? `I used “${pages[currentPage].title}” to complete the first working version and saved it to your Yukie workspace.` : 'I completed the first working version and saved it to your Yukie workspace.', deliverable: { title: 'Task result', meta: usesPageContext ? 'Editable output · Page source attached' : 'Editable output' }, followups: ['Show the work plan', 'Refine the result'] };
+      }
+
+      function runAgentTask(value) {
+        const usesPageContext = agentUsesPageContext || /(?:this|current) page|from (?:the )?page|page context|selection/i.test(value);
+        const config = agentTaskConfig(value, usesPageContext);
+        lastAgentUsesPageContext = usesPageContext;
+        switchView('home');
+        chatContextChip.hidden = !usesPageContext;
+        agentUsesPageContext = false;
+        startResponse(value, config.response, usesPageContext ? pages[currentPage].domain : null, config.followups, { target: 'agent', deliverable: config.deliverable, usesPageContext });
+      }
+
+      function primePageCreate(target) {
+        if (target === 'agent') {
+          primeAgentPrompt('page-create');
+          return;
+        }
+        switchView('chat');
+        prompt.value = 'Create a [deliverable] from this page. Preserve the key facts and cite the page as a source.';
+        prompt.focus();
+        prompt.setSelectionRange(prompt.value.indexOf('['), prompt.value.indexOf(']') + 1);
+        showToast(`Prompt added for ${modelName.textContent}`);
+      }
+
+      function runWebQuick(action, target = primaryView === 'chat' ? 'chat' : 'agent') {
+        if (action === 'page-create') {
+          primePageCreate(target);
+          return;
+        }
+        if (action === 'summarize-youtube') setPage('youtube');
+        const page = pages[currentPage];
+        switchView(target === 'agent' ? 'home' : 'chat');
+        if (target === 'agent') {
+          lastAgentUsesPageContext = true;
+          chatContextChip.hidden = false;
+        }
+        const options = target === 'agent' ? { target: 'agent', usesPageContext: true } : {};
+        if (action === 'read-discuss') {
+          startResponse('Read this page and discuss its key ideas with me.', `I have read “${page.title}.” Its central idea is that browser AI is moving from answering questions to completing tasks. The biggest product differences will be cross-page execution, permission controls, and deliverables.`, page.domain, ['Explain the permission model', 'Compare this with other agents'], options);
+        }
+        if (action === 'summarize-page') {
+          startResponse('Summarize this page.', 'Three takeaways: browser agents need multi-page task context; clicks, typing, and submissions need permission controls; and the real value is delivering reusable tables, reports, or editable work rather than another block of text.', page.domain, ['Turn this into a brief', 'List the product opportunities'], options);
+        }
+        if (action === 'summarize-youtube') {
+          startResponse('Summarize this YouTube video.', 'The 18-minute video explains the browser agent workflow: reading pages, researching across tabs, taking low-risk actions, pausing before sensitive steps, and handing results into a full workspace. Key chapters begin at 03:18, 08:42, and 13:16.', 'youtube.com · Transcript', ['Show the chapter timeline', 'Extract the action checklist'], options);
+        }
+      }
+
+      function loadHistory(key) {
+        const conversations = {
+          competitors: {
+            mode: 'agent',
+            page: 'article',
+            user: 'Compare the leading browser agents and identify gaps for Yukie.',
+            answer: 'The strongest competitors cluster around three jobs: page-level assistance, cross-tab research, and autonomous browser actions. Yukie can differentiate by connecting those browser actions to durable workspace outputs such as decks, reports, images, and team-ready artifacts.',
+            source: '3 open tabs',
+            followups: ['Build a comparison table', 'Turn this into a product brief'],
+            deliverable: { title: 'Browser agent competitor brief', meta: 'Research brief · 8 pages · 3 sources' }
+          },
+          pricing: {
+            mode: 'chat',
+            model: 'GPT-5.5',
+            page: 'pricing',
+            user: 'Which plan is best for a five-person analytics team?',
+            answer: 'Pro is the best starting point if the team mainly needs unlimited reporting. Business becomes worthwhile when SSO, audit logs, or stricter team controls are required.',
+            source: 'acme.example',
+            followups: ['Compare annual cost', 'Draft a recommendation']
+          },
+          'launch-deck': {
+            mode: 'agent',
+            page: 'article',
+            user: 'Create a launch strategy deck for Yukie Browser Agent.',
+            answer: 'I created a 12-slide deck covering the user problem, browser workflows, product positioning, permission model, launch sequence, and success metrics.',
+            source: null,
+            followups: ['Add a competitor slide', 'Create speaker notes'],
+            deliverable: { title: 'Yukie Browser Agent launch deck', meta: 'Presentation · 12 slides · Ready to edit' }
+          },
+          youtube: {
+            mode: 'chat',
+            model: 'Gemini 3 Pro',
+            page: 'youtube',
+            user: 'Give me notes from this browser agents video.',
+            answer: 'The video covers multi-tab research, action permissions, and workspace handoff. The most useful sections begin at 03:18, 08:42, and 13:16.',
+            source: 'youtube.com · Transcript',
+            followups: ['Show the chapter timeline', 'Create a meeting brief']
+          },
+          'page-report': {
+            mode: 'agent',
+            page: 'article',
+            user: 'Turn this page and the related tabs into a product research report.',
+            answer: 'I combined the open tabs into a structured report with market context, competitor patterns, user risks, and recommended opportunities for Yukie.',
+            source: '3 open tabs',
+            followups: ['Add an executive summary', 'Export as slides'],
+            deliverable: { title: 'Browser agent opportunity report', meta: 'Document · 8 pages · 6 citations' }
+          },
+          selection: {
+            mode: 'chat',
+            model: 'Claude Opus 4.7',
+            page: 'article',
+            user: 'Explain what “task context” means in this paragraph.',
+            answer: 'Task context includes the user’s goal, relevant pages, prior decisions, constraints, and intended output. It lets the agent work toward a result instead of answering one isolated question.',
+            source: 'studiojournal.example · Selection',
+            followups: ['Give an example', 'Compare it with page context']
+          },
+          'permission-review': {
+            mode: 'chat',
+            model: 'DeepSeek V3.2',
+            page: 'article',
+            user: 'Review the permission model described on this page.',
+            answer: 'The design is directionally sound: reading is user-triggered, sensitive actions require confirmation, and sources remain visible. The next step is to separate page-read permission from form-submit permission.',
+            source: 'studiojournal.example',
+            followups: ['Create a permission matrix', 'List security edge cases']
+          }
+        };
+        const conversation = conversations[key];
+        if (!conversation) return;
+        setPage(conversation.page);
+        if (conversation.mode === 'agent') {
+          resetAgentTask(false);
+          lastAgentUsesPageContext = Boolean(conversation.source);
+          addMessage('user', conversation.user, null, { target: 'agent' });
+          addMessage('assistant', conversation.answer, conversation.source, { target: 'agent', followups: conversation.followups, deliverable: conversation.deliverable });
+          showToast('Yukie task restored');
+        } else {
+          switchView('chat');
+          resetChat(false);
+          if (conversation.model) selectChatModel(conversation.model, false);
+          addMessage('user', conversation.user);
+          addMessage('assistant', conversation.answer, conversation.source, { followups: conversation.followups });
+          showToast('Chat restored');
+        }
+      }
+
+      document.addEventListener('change', (event) => {
+        const mediaType = event.target.dataset.mediaModel;
+        if (mediaType) updateMediaModel(mediaType);
+      });
+
+      webpage.addEventListener('contextmenu', (event) => {
+        event.preventDefault();
+        const selected = window.getSelection()?.toString().trim() || '';
+        const fallback = document.getElementById('article-content').innerText.trim().replace(/\s+/g, ' ').slice(0, 320);
+        contextMenuHasSelection = Boolean(selected);
+        contextMenuText = (selected || fallback).slice(0, 600);
+        contextSelection.textContent = selected.length > 120 ? `${selected.slice(0, 120)}...` : selected;
+        contextSelection.hidden = !selected;
+        document.getElementById('context-ask-label').textContent = selected ? 'Ask about selection' : 'Ask about page';
+        pageContextMenu.hidden = false;
+        const bounds = pageContextMenu.getBoundingClientRect();
+        pageContextMenu.style.left = `${Math.max(8, Math.min(event.clientX, window.innerWidth - bounds.width - 8))}px`;
+        pageContextMenu.style.top = `${Math.max(8, Math.min(event.clientY, window.innerHeight - bounds.height - 8))}px`;
+        pageContextMenu.querySelector('.context-menu-item')?.focus();
+        refreshIcons();
+      });
+
+      webpage.addEventListener('scroll', hideContextMenu, { passive: true });
+
+      document.querySelectorAll('.auth-code').forEach((input, index, inputs) => {
+        input.addEventListener('input', () => {
+          input.value = input.value.replace(/\D/g, '').slice(-1);
+          document.getElementById('auth-code-error').hidden = true;
+          if (input.value && inputs[index + 1]) inputs[index + 1].focus();
+        });
+        input.addEventListener('keydown', (event) => {
+          if (event.key === 'Backspace' && !input.value && inputs[index - 1]) inputs[index - 1].focus();
+        });
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        hideContextMenu();
+        setExtensionPickerOpen(false);
+        setModelMenuOpen(false);
+        setHistoryPanelOpen(false);
+        if (!authOverlay.hidden) closeAuth();
+      });
+
+      document.addEventListener('click', (event) => {
+        const contextAction = event.target.closest('[data-context-action]')?.dataset.contextAction;
+        if (contextAction) {
+          hideContextMenu();
+          if (contextAction === 'ask-selection') {
+            resetChat(false);
+            switchView('chat');
+            prompt.value = contextMenuHasSelection ? `Ask about this selection: “${contextMenuText}”` : 'Ask about this page: ';
+            prompt.focus();
+          }
+          if (contextAction === 'send-selection') {
+            resetAgentTask(false);
+            agentUsesPageContext = true;
+            chatContextChip.hidden = false;
+            prompt.value = contextMenuHasSelection ? `Use this page selection as context:\n\n“${contextMenuText}”\n\nTask: ` : 'Use this page as context.\n\nTask: ';
+            prompt.focus();
+          }
+          if (contextAction === 'summarize-page') runWebQuick('summarize-page', primaryView === 'chat' ? 'chat' : 'agent');
+          if (contextAction === 'create-from-page') primeAgentPrompt('page-create');
+          return;
+        }
+        if (!event.target.closest('#page-context-menu')) hideContextMenu();
+
+        const authAction = event.target.closest('[data-auth-action]')?.dataset.authAction;
+        if (authAction) {
+          if (authAction === 'close') closeAuth();
+          if (authAction === 'provider') showAuthStep('authorize');
+          if (authAction === 'back-login') showAuthStep('login');
+          if (authAction === 'continue-email') {
+            const email = authEmail.value.trim();
+            const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+            document.getElementById('auth-email-error').hidden = valid;
+            if (valid) {
+              document.getElementById('auth-code-email').textContent = email;
+              document.querySelectorAll('.auth-code').forEach((input) => { input.value = ''; });
+              showAuthStep('code');
+              document.querySelector('.auth-code').focus();
+            }
+          }
+          if (authAction === 'verify-code') {
+            const complete = [...document.querySelectorAll('.auth-code')].every((input) => input.value);
+            document.getElementById('auth-code-error').hidden = complete;
+            if (complete) showAuthStep('authorize');
+          }
+          if (authAction === 'allow') showAuthStep('success');
+          if (authAction === 'done') completeConnection();
+          return;
+        }
+        if (event.target === authOverlay) { closeAuth(); return; }
+
+        const viewButton = event.target.closest('[data-view-target]');
+        if (viewButton) {
+          if (viewButton.dataset.viewTarget === 'home') resetAgentTask(false);
+          else switchView(viewButton.dataset.viewTarget);
+          return;
+        }
+
+        const browserTab = event.target.closest('[data-page]');
+        if (browserTab) { setPage(browserTab.dataset.page); return; }
+
+        const quick = event.target.closest('[data-quick]')?.dataset.quick;
+        if (quick) {
+          const pageTarget = currentView === 'chat' ? 'chat' : 'agent';
+          if (['ppt', 'document', 'image', 'video'].includes(quick)) primeAgentPrompt(quick);
+          else if (['read-discuss', 'summarize-page', 'summarize-youtube', 'page-create'].includes(quick)) runWebQuick(quick, pageTarget);
+          else switchView(quick);
+          return;
+        }
+
+        const selectedModel = event.target.closest('[data-model]')?.dataset.model;
+        if (selectedModel) {
+          selectChatModel(selectedModel);
+          return;
+        }
+
+        const historyKey = event.target.closest('[data-history]')?.dataset.history;
+        if (historyKey) { loadHistory(historyKey); return; }
+
+        const followup = event.target.closest('[data-followup]')?.dataset.followup;
+        if (followup) {
+          const page = pages[currentPage];
+          const target = event.target.closest('#agent-message-list') ? 'agent' : 'chat';
+          const deliverable = target === 'agent' ? { title: 'Updated task result', meta: 'Revision complete · Previous version retained' } : undefined;
+          const usesPageContext = target === 'chat' || lastAgentUsesPageContext;
+          const response = usesPageContext ? `Here is a focused follow-up based on “${page.title}.” I verified the page evidence and updated the result.` : 'Here is the revised result in a concise, reusable format.';
+          startResponse(followup, response, usesPageContext ? page.domain : null, ['Go deeper', 'Turn this into a document'], { target, deliverable, usesPageContext });
+          return;
+        }
+
+        const action = event.target.closest('[data-action]')?.dataset.action;
+        if (action === 'open-login') { openAuth(); return; }
+        if (action === 'back-mode') { switchView(primaryView); return; }
+        if (action === 'new-chat') { resetChat(); return; }
+        if (action === 'new-yukie-task') { resetAgentTask(); return; }
+        if (action === 'toggle-history') { setHistoryPanelOpen(historyPanel.hidden); return; }
+        if (action === 'open-main') { window.open('https://www.glbgpt.com/home/yukie', '_blank', 'noopener'); showToast('Opening the full Yukie workspace'); return; }
+        if (action === 'open-product') {
+          const product = event.target.closest('[data-product]')?.dataset.product;
+          const productURL = productRoutes[product];
+          if (productURL) window.open(productURL, '_blank', 'noopener');
+          if (product) showToast(`Opening ${product} on GlobalGPT`);
+          return;
+        }
+        if (action === 'choose-model') { setModelMenuOpen(modelMenu.hidden); return; }
+        if (action === 'toggle-sources') {
+          const sourceList = event.target.closest('.message-stack')?.querySelector('.source-list');
+          if (sourceList) sourceList.hidden = !sourceList.hidden;
+          return;
+        }
+        if (action === 'copy-message') {
+          const copy = event.target.closest('.message')?.querySelector('.message-bubble')?.textContent || '';
+          if (navigator.clipboard?.writeText) navigator.clipboard.writeText(copy).catch(() => {});
+          showToast('Answer copied');
+          return;
+        }
+        if (action === 'like-message' || action === 'dislike-message') {
+          const button = event.target.closest('.message-action');
+          button.closest('.message-actions').querySelectorAll('[data-action="like-message"], [data-action="dislike-message"]').forEach((item) => item.classList.toggle('active', item === button && !button.classList.contains('active')));
+          showToast('Feedback saved');
+          return;
+        }
+        if (action === 'regenerate') {
+          const message = event.target.closest('.message');
+          const response = message?.dataset.response;
+          if (response) {
+            const target = message.dataset.target || 'chat';
+            message.remove();
+            startResponse('', response, pages[currentPage].domain, ['Try a different angle', 'Make it more concise'], { addUser: false, target });
+          }
+          return;
+        }
+        if (action === 'add-reference') {
+          const type = event.target.closest('[data-reference]').dataset.reference;
+          document.getElementById(`${type}-reference-chip`).hidden = false;
+          event.target.closest('.reference-upload').hidden = true;
+          showToast(type === 'image' ? 'Page capture added as a reference' : 'Reference media added');
+          return;
+        }
+        if (action === 'remove-reference') {
+          const type = event.target.closest('[data-reference]').dataset.reference;
+          document.getElementById(`${type}-reference-chip`).hidden = true;
+          document.querySelector(`.reference-upload[data-reference="${type}"]`).hidden = false;
+          return;
+        }
+        if (action === 'attach') { showToast('Prototype: file added to this task'); return; }
+        if (action === 'fake-upload') {
+          if (currentView === 'audio') {
+            document.getElementById('audio-result').hidden = false;
+            document.querySelector('#audio-result strong').textContent = 'Transcription complete';
+            document.querySelector('#audio-result p').textContent = 'Processed 03:42 of audio. Copy the text or send it to Chat for further work.';
+          }
+          if (currentView === 'ocr') document.getElementById('ocr-result').hidden = false;
+          showToast('File uploaded and processed');
+          return;
+        }
+        if (action === 'capture-area') { switchView('ocr'); document.getElementById('ocr-result').hidden = false; showToast('Captured the visible area of this page'); return; }
+        if (action === 'translate-page') { document.getElementById('translate-source').value = 'AI Browser Agents Are Moving From Answers to Actions. Browser AI is shifting from answering questions to completing multi-step tasks.'; document.getElementById('translate-result').hidden = true; showToast('Page text loaded — ready to translate'); return; }
+        if (action === 'clear-translation') { document.getElementById('translate-source').value = ''; document.getElementById('translate-result').hidden = true; document.getElementById('translate-source').focus(); return; }
+        if (action === 'translate-voice') { document.getElementById('translate-source').value = 'Browser agents can complete multi-step tasks across tabs.'; showToast('Voice input captured'); return; }
+        if (action === 'speak-translation') { showToast('Reading the current text aloud'); return; }
+        if (action === 'translate-document') { showToast('Choose a PDF or document to translate'); return; }
+        if (action === 'translate-long-text') { showToast('Long-text translation mode selected'); return; }
+        if (action === 'translate-model') { showToast('Yukie Translate model selected'); return; }
+        if (action === 'translate-preferences') { showToast('Translation preferences opened'); return; }
+        if (action === 'source-language' || action === 'target-language') {
+          const language = event.target.closest('.language-button').querySelector('span');
+          const choices = action === 'source-language' ? ['Auto detect', 'English', 'Simplified Chinese'] : ['Simplified Chinese', 'English', 'Japanese'];
+          language.textContent = choices[(choices.indexOf(language.textContent) + 1) % choices.length];
+          return;
+        }
+        if (action === 'swap-languages') {
+          const sourceLanguage = document.querySelector('#source-language span');
+          const targetLanguage = document.querySelector('#target-language span');
+          const sourceValue = sourceLanguage.textContent === 'Auto detect' ? 'English' : sourceLanguage.textContent;
+          sourceLanguage.textContent = targetLanguage.textContent;
+          targetLanguage.textContent = sourceValue;
+          showToast('Languages swapped');
+          return;
+        }
+        if (action === 'reset-tool') {
+          if (currentView === 'image' || currentView === 'video') resetMediaTool(currentView);
+          else {
+            const view = document.querySelector(`[data-view="${currentView}"]`);
+            view.querySelectorAll('textarea, input').forEach((input) => { input.value = ''; });
+            view.querySelectorAll('.result-panel, .handoff-result').forEach((result) => { result.hidden = true; });
+          }
+          return;
+        }
+
+        const generate = event.target.closest('[data-generate]')?.dataset.generate;
+        if (generate) {
+          if (generate === 'image' || generate === 'video') { runMediaGeneration(generate); return; }
+          if (generate === 'translate') {
+            const source = document.getElementById('translate-source');
+            if (!source.value.trim()) { showToast('Enter text to translate'); source.focus(); return; }
+            document.getElementById('translated-copy').textContent = '浏览器智能体正在从回答问题，转向完成跨标签页的多步骤任务。';
+          }
+          const result = document.getElementById(`${generate}-result`);
+          if (result) result.hidden = false;
+          showToast(generate === 'audio' ? 'Audio saved to GlobalGPT' : generate === 'creator' ? 'Outline generated' : 'Task complete');
+          refreshIcons();
+          return;
+        }
+
+        const download = event.target.closest('[data-download]')?.dataset.download;
+        if (download) { document.getElementById('download-result').hidden = false; showToast(download === 'mobile' ? 'Mobile download code ready' : 'Matched your desktop system'); return; }
+
+        const extensionAction = event.target.closest('[data-extension-action]')?.dataset.extensionAction;
+        if (extensionAction === 'close-picker') { setExtensionPickerOpen(false); return; }
+
+        const extensionMode = event.target.closest('[data-extension-mode]')?.dataset.extensionMode;
+        if (extensionMode) {
+          setExtensionOpen(true);
+          switchView(extensionMode);
+          showToast(extensionMode === 'home' ? 'Yukie opened' : 'Chat opened');
+          return;
+        }
+
+        const browserAction = event.target.closest('[data-browser-action]')?.dataset.browserAction;
+        if (browserAction === 'close-extension') {
+          setExtensionOpen(false);
+          setExtensionPickerOpen(false);
+          sidePanelLauncher.focus({ preventScroll: true });
+          return;
+        }
+        if (browserAction === 'toggle-extension') {
+          if (!extensionPanel.hidden) {
+            setExtensionOpen(false);
+            setExtensionPickerOpen(false);
+          } else {
+            setExtensionPickerOpen(extensionPicker.hidden);
+          }
+          return;
+        }
+        if (browserAction === 'open-extension') {
+          if (performance.now() < launcherIgnoreClickUntil) return;
+          setExtensionOpen(true);
+          return;
+        }
+        if (browserAction === 'reload') { setPage(currentPage); showToast('Page reloaded'); return; }
+        if (browserAction === 'back' || browserAction === 'forward') {
+          const order = ['article', 'youtube', 'pricing'];
+          const delta = browserAction === 'back' ? -1 : 1;
+          setPage(order[(order.indexOf(currentPage) + delta + order.length) % order.length]);
+          return;
+        }
+        if (browserAction === 'bookmark') { showToast('Page bookmarked'); return; }
+        if (browserAction === 'menu') showToast('Browser menu preview');
+      });
+
+      document.addEventListener('pointerdown', (event) => {
+        if (!extensionPicker.hidden && !event.target.closest('#extension-picker') && !event.target.closest('#extension-toggle')) setExtensionPickerOpen(false);
+        if (!modelMenu.hidden && !event.target.closest('#model-menu') && !event.target.closest('#model-select')) setModelMenuOpen(false);
+        if (!historyPanel.hidden && !event.target.closest('#history-panel') && !event.target.closest('[data-action="toggle-history"]')) setHistoryPanelOpen(false);
+      });
+
+      document.addEventListener('click', (event) => {
+        const segmentButton = event.target.closest('.segmented button');
+        if (!segmentButton) return;
+        const group = segmentButton.closest('.segmented');
+        group.querySelectorAll('button').forEach((button) => button.setAttribute('aria-pressed', String(button === segmentButton)));
+        if (segmentButton.dataset.audioMode) {
+          const transcription = segmentButton.dataset.audioMode === 'transcribe';
+          document.getElementById('audio-tts').hidden = transcription;
+          document.getElementById('audio-transcribe').hidden = !transcription;
+          document.getElementById('audio-result').hidden = true;
+        }
+      });
+
+      composer.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (generationTimer) { stopGeneration(); return; }
+        const value = prompt.value.trim();
+        if (!value) { showToast('Enter a question or task first'); prompt.focus(); return; }
+        prompt.value = '';
+        if (currentView === 'home') {
+          runAgentTask(value);
+        } else {
+          startResponse(value, `I will answer using the current page. For “${value},” I suggest verifying the page's key facts first, then organizing the conclusion into citation-ready points.`, pages[currentPage].domain, ['Go deeper', 'Create a short brief']);
+        }
+      });
+
+      setPage('article');
+      switchView('home');
+      const demo = new URLSearchParams(window.location.search).get('demo');
+      if (demo === 'chat') {
+        switchView('chat');
+        addMessage('user', 'Summarize this page and explain the product opportunity for Yukie.');
+        addMessage('assistant', 'Browser AI is moving from page-level answers to multi-step work across tabs. Yukie can stand out by turning browser context directly into durable outputs such as decks, reports, images, and videos, while keeping every source and permission visible.', pages.article.domain, { followups: ['Build a competitor table', 'Turn this into a product brief'] });
+      } else if (demo === 'agent') {
+        runAgentTask('Write a report about browser agent product opportunities for a product team.');
+      } else if (demo === 'preset') {
+        primeAgentPrompt('document');
+      } else if (demo === 'translate') {
+        switchView('translate');
+        document.getElementById('translate-source').value = 'Browser agents can complete multi-step tasks across tabs.';
+      }
+      refreshIcons();
+    })();
+  </script>
+</body>
+</html>
